@@ -237,6 +237,24 @@ thoroughly, and reviewed carefully. Additionally, old code with insufficient
 test coverage should either be exercised by new tests or removed if it is no
 longer necessary.</p>
 
+<p>As a colleague pointed out to me, it&rsquo;s easy to say, &ldquo;Well obviously everything
+should have thorough test-coverage.&rdquo; The real question is, why does code land
+without tests? Or, to put it positively, how can we ensure that new features
+land with tests? One suggestion is to have a publicly documented and
+agreed-upon set of standards for landing code. We do ostensibly have that at
+Mozilla, but it appears to fall apart under time pressure. Anecdotally,
+features in early B2G builds would often regress due to a near absence of
+tests. The engineers were obviously under a tight deadline, and I imagine it
+was a natural reaction to neglect something not seen as essential: the tests.
+So, perhaps that&rsquo;s the answer: we need to ensure buy-in to the idea that tests
+are as essential as the code itself.</p>
+
+<p>That said, I&rsquo;m not sure the presence of tests alone would have caught this bug.
+It would have required a test case with a duplicate key:value pair and some
+sort of memory-leak detection. However, the act of writing tests may have
+inspired the very question I asked early in this post, which could have led
+to finding the bug.</p>
+
 <p>For those curious, the fix for this code consisted of null-checking <code>curve</code> and
 <code>keyPairInfo-&gt;ecPopPubKey</code> respectively before allocating and assigning to them
 new memory.</p>
