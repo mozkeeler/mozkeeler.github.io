@@ -9,7 +9,41 @@
   <meta name="author" content="Your Name">
 
   
-  <meta name="description" content=" Blog Archives Recent Posts ">
+  <meta name="description" content="Consider the following code (modified for clarity): 1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -66,6 +100,147 @@
       <div class="blog-index">
   
   
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/04/16/leaky-input-parsing-in-nsconverttoactualkeygenparams/">Leaky Input Parsing in nsConvertToActualKeyGenParams</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-04-16T13:52:15-07:00" pubdate data-updated="true">Apr 16<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Consider the following code (modified for clarity):</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+</pre></td><td class='code'><pre><code class='c++'><span class='line'><span class="k">static</span> <span class="kt">void</span><span class="o">*</span>
+</span><span class='line'><span class="n">nsConvertToActualKeyGenParams</span><span class="p">(</span><span class="n">uint32_t</span> <span class="n">keyGenMech</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">params</span><span class="p">,</span>
+</span><span class='line'>                              <span class="n">uint32_t</span> <span class="n">paramLen</span><span class="p">,</span> <span class="n">int32_t</span> <span class="n">keySize</span><span class="p">,</span>
+</span><span class='line'>                              <span class="n">nsKeyPairInfo</span> <span class="o">*</span><span class="n">keyPairInfo</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="kt">char</span> <span class="o">*</span><span class="n">curve</span> <span class="o">=</span> <span class="n">nullptr</span><span class="p">;</span>
+</span><span class='line'>  <span class="kt">char</span> <span class="o">*</span><span class="n">next_input</span> <span class="o">=</span> <span class="n">params</span><span class="p">;</span>
+</span><span class='line'>  <span class="kt">char</span> <span class="o">*</span><span class="n">name</span> <span class="o">=</span> <span class="n">nullptr</span><span class="p">;</span>
+</span><span class='line'>  <span class="kt">char</span> <span class="o">*</span><span class="n">value</span> <span class="o">=</span> <span class="n">nullptr</span><span class="p">;</span>
+</span><span class='line'>  <span class="kt">int</span> <span class="n">name_len</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'>  <span class="kt">int</span> <span class="n">value_len</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">while</span> <span class="p">(</span><span class="n">getNextNameValueFromECKeygenParamString</span><span class="p">(</span>
+</span><span class='line'>          <span class="n">next_input</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">name_len</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">value_len</span><span class="p">,</span>
+</span><span class='line'>          <span class="n">next_input</span><span class="p">))</span>
+</span><span class='line'>  <span class="p">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="n">PL_strncmp</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&quot;curve&quot;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">min</span><span class="p">(</span><span class="n">name_len</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+</span><span class='line'>    <span class="p">{</span>
+</span><span class='line'>      <span class="n">curve</span> <span class="o">=</span> <span class="n">PL_strndup</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">value_len</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">PL_strncmp</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&quot;popcert&quot;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">min</span><span class="p">(</span><span class="n">name_len</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+</span><span class='line'>    <span class="p">{</span>
+</span><span class='line'>      <span class="kt">char</span> <span class="o">*</span><span class="n">certstr</span> <span class="o">=</span> <span class="n">PL_strndup</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">value_len</span><span class="p">);</span>
+</span><span class='line'>      <span class="k">if</span> <span class="p">(</span><span class="n">certstr</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="n">keyPairInfo</span><span class="o">-&gt;</span><span class="n">ecPopCert</span> <span class="o">=</span> <span class="n">CERT_ConvertAndDecodeCertificate</span><span class="p">(</span><span class="n">certstr</span><span class="p">);</span>
+</span><span class='line'>        <span class="n">PL_strfree</span><span class="p">(</span><span class="n">certstr</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="n">keyPairInfo</span><span class="o">-&gt;</span><span class="n">ecPopCert</span><span class="p">)</span>
+</span><span class='line'>        <span class="p">{</span>
+</span><span class='line'>          <span class="n">keyPairInfo</span><span class="o">-&gt;</span><span class="n">ecPopPubKey</span> <span class="o">=</span> <span class="n">CERT_ExtractPublicKey</span><span class="p">(</span><span class="n">keyPairInfo</span><span class="o">-&gt;</span><span class="n">ecPopCert</span><span class="p">);</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>      <span class="p">}</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// further processing, etc.</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The purpose of <code>nsConvertToActualKeyGenParams</code> is to parse and process a string
+consisting of semicolon-delimited key:value pairs. The known keys are <code>"curve"</code>
+and <code>"popcert"</code>. The function <code>getNextNameValueFromECKeygenParamString</code>
+tokenizes the input. The only state that function keeps is how far along in
+<code>params</code> it has gotten.  Let&rsquo;s assume there&rsquo;s nothing wrong with it. If you&rsquo;re
+the suspicious sort, you may have already noticed what can go wrong with
+<code>nsConvertToActualKeyGenParams</code>.  What happens if a string like
+<code>"curve=secp521r1;curve=secp521r1"</code> is given as its input? <code>curve</code> will first
+point to a freshly-allocated copy of <code>"secp521r1"</code> and then it will point to
+another freshly-allocated copy of <code>"secp521r1"</code>. Of course, the issue isn&rsquo;t
+that it&rsquo;s inefficient &ndash; it&rsquo;s that the memory for that first copy has been
+leaked. It&rsquo;s even worse if multiple <code>"popcert"</code> values are given, because each
+copy leaks an entire <code>CERTCertificate</code>.</p>
+
+<p>If this were the argument-parsing code of a locally-run, non-setuid,
+short-lived utility program, it would probably be no more than a
+papercut-correctness bug.  Sure, some memory gets leaked, but nobody would call
+it with nonsensical input, right? Unfortunately this is more serious than a
+local correctness issue. The input to <code>nsConvertToActualKeyGenParams</code> gets
+passed unchanged from <code>window.crypto.generateCRMFRequest</code>, meaning that any
+page could trigger this bug.</p>
+
+<p>Looking at the history of this code, it appears to have landed as part of a
+large commit with no tests. The reviewer even mentions that the key:value
+parsing should be in its own function, which maybe would have made this bug
+more obvious. In any case, going forward, it&rsquo;s clear that large pieces of new
+code should be broken into smaller pices, tested thoroughly, and reviewed
+carefully.  Additionally, old code with insufficient testing coverage should
+either be tested or removed if it is no longer necessary.</p>
+</div>
+  
+  
+
+
+    </article>
+  
   <div class="pagination">
     
     <a href="/blog/archives">Blog Archives</a>
@@ -77,6 +252,10 @@
     <section>
   <h1>Recent Posts</h1>
   <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/04/16/leaky-input-parsing-in-nsconverttoactualkeygenparams/">Leaky Input Parsing in nsConvertToActualKeyGenParams</a>
+      </li>
     
   </ul>
 </section>
