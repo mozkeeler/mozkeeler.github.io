@@ -5,13 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Blog Archive - mozkeeler</title>
+  <title>What's All This, Then? - mozkeeler</title>
   <meta name="author" content="David Keeler">
 
   
-  <meta name="description" content="Blog Archive 2014 Leaky Input Parsing in nsConvertToActualKeyGenParams
-Apr 16 2014 What&#8217;s All This, Then?
-Apr 16 2014 Recent Posts Leaky Input &hellip;">
+  <meta name="description" content="While working on improving Firefox security code1, I&rsquo;ve come across a few
+things that make me go &ldquo;Hmmm&hellip;&rdquo;. Some of these are &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -20,7 +19,7 @@ Apr 16 2014 Recent Posts Leaky Input &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://mozkeeler.github.io/blog/archives">
+  <link rel="canonical" href="http://mozkeeler.github.io/blog/2014/04/16/whats-all-this">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="mozkeeler" type="application/atom+xml">
@@ -66,41 +65,100 @@ Apr 16 2014 Recent Posts Leaky Input &hellip;">
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Blog Archive</h1>
+    
+      <h1 class="entry-title">What's All This, Then?</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-04-16T10:57:38-07:00" pubdate data-updated="true">Apr 16<span>th</span>, 2014</time>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives">
 
 
+<div class="entry-content"><p>While working on improving Firefox security code<sup id="fnref:1"><a href="#fn:1" rel="footnote">1</a></sup>, I&rsquo;ve come across a few
+things that make me go &ldquo;Hmmm&hellip;&rdquo;. Some of these are bugs and some are
+practices that could lead to bugs, or at least make the code harder to
+maintain. I thought it would be worthwhile to share what I&rsquo;ve learned.</p>
 
-  
-  <h2>2014</h2>
-
-<article>
-  
-<h1><a href="/blog/2014/04/16/leaky-input-parsing-in-nsconverttoactualkeygenparams/">Leaky Input Parsing in nsConvertToActualKeyGenParams</a></h1>
-<time datetime="2014-04-16T13:52:15-07:00" pubdate><span class='month'>Apr</span> <span class='day'>16</span> <span class='year'>2014</span></time>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/blog/2014/04/16/whats-all-this/">What&#8217;s All This, Then?</a></h1>
-<time datetime="2014-04-16T10:57:38-07:00" pubdate><span class='month'>Apr</span> <span class='day'>16</span> <span class='year'>2014</span></time>
-
-
-</article>
+<p>Of course, I&rsquo;ve written my fair share of bugs and I&rsquo;m not immune to
+writing difficult-to-maintain code. This is in no way meant to denigrate the
+efforts of developers that have worked on this code before me. Indeed, without
+them, there would be no security code in Firefox to work on. In general, I
+won&rsquo;t be naming names or linking directly to changesets. Due to the nature of
+open source, this information is available to those who choose to look for it.
+However, my intention is not to talk about people but about process. In
+particular, if we can examine the processes that led to the code in question,
+hopefully we can improve how we currently write code, resulting in safer, more
+easily maintained code.</p>
+<div class="footnotes">
+<hr/>
+<ol>
+<li id="fn:1">
+<p>I work on code in the module formally called the &ldquo;Personal Security Manager&rdquo;. I call it the &ldquo;Privacy and Security Module&rdquo;, or just &ldquo;PSM&rdquo; for short.<a href="#fnref:1" rev="footnote">&#8617;</a></p></li>
+</ol>
+</div>
 
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">David Keeler</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-04-16T10:57:38-07:00" pubdate data-updated="true">Apr 16<span>th</span>, 2014</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://mozkeeler.github.io/blog/2014/04/16/whats-all-this/" data-via="mozkeeler" data-counturl="http://mozkeeler.github.io/blog/2014/04/16/whats-all-this/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+      
+        <a class="basic-alignment right" href="/blog/2014/04/16/leaky-input-parsing-in-nsconverttoactualkeygenparams/" title="Next Post: Leaky Input Parsing in  nsConvertToActualKeyGenParams">Leaky Input Parsing in  nsConvertToActualKeyGenParams &raquo;</a>
+      
+    </p>
+  </footer>
 </article>
 
 </div>

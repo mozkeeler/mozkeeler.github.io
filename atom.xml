@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[My Octopress Blog]]></title>
+  <title><![CDATA[mozkeeler]]></title>
   <link href="http://mozkeeler.github.io/atom.xml" rel="self"/>
   <link href="http://mozkeeler.github.io/"/>
-  <updated>2014-04-16T13:58:03-07:00</updated>
+  <updated>2014-04-16T15:29:53-07:00</updated>
   <id>http://mozkeeler.github.io/</id>
   <author>
-    <name><![CDATA[Your Name]]></name>
+    <name><![CDATA[David Keeler]]></name>
     
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
@@ -99,31 +99,68 @@
 consisting of semicolon-delimited key:value pairs. The known keys are <code>"curve"</code>
 and <code>"popcert"</code>. The function <code>getNextNameValueFromECKeygenParamString</code>
 tokenizes the input. The only state that function keeps is how far along in
-<code>params</code> it has gotten.  Let&rsquo;s assume there&rsquo;s nothing wrong with it. If you&rsquo;re
+<code>params</code> it has gotten. Let&rsquo;s assume there&rsquo;s nothing wrong with it. If you&rsquo;re
 the suspicious sort, you may have already noticed what can go wrong with
-<code>nsConvertToActualKeyGenParams</code>.  What happens if a string like
-<code>"curve=secp521r1;curve=secp521r1"</code> is given as its input? <code>curve</code> will first
-point to a freshly-allocated copy of <code>"secp521r1"</code> and then it will point to
-another freshly-allocated copy of <code>"secp521r1"</code>. Of course, the issue isn&rsquo;t
-that it&rsquo;s inefficient &ndash; it&rsquo;s that the memory for that first copy has been
-leaked. It&rsquo;s even worse if multiple <code>"popcert"</code> values are given, because each
-copy leaks an entire <code>CERTCertificate</code>.</p>
+<code>nsConvertToActualKeyGenParams</code>.</p>
+
+<p>What happens if a string like <code>"curve=secp521r1;curve=secp521r1"</code> is given as
+its input? <code>curve</code> will first point to a freshly-allocated copy of
+<code>"secp521r1"</code> and then it will point to another freshly-allocated copy of
+<code>"secp521r1"</code>. Of course, the issue is not efficiency &ndash; it&rsquo;s that the
+memory for that first copy has been leaked. Even worse, if multiple
+<code>"popcert"</code> values are given, each one will leak an entire <code>CERTCertificate</code>.</p>
 
 <p>If this were the argument-parsing code of a locally-run, non-setuid,
 short-lived utility program, it would probably be no more than a
-papercut-correctness bug.  Sure, some memory gets leaked, but nobody would call
-it with nonsensical input, right? Unfortunately this is more serious than a
-local correctness issue. The input to <code>nsConvertToActualKeyGenParams</code> gets
+papercut-correctness bug. Sure, some memory could be leaked, but nobody would
+call it with nonsensical input, right? Unfortunately this is more serious than
+a local correctness issue. The input to <code>nsConvertToActualKeyGenParams</code> gets
 passed unchanged from <code>window.crypto.generateCRMFRequest</code>, meaning that any
 page could trigger this bug.</p>
 
 <p>Looking at the history of this code, it appears to have landed as part of a
 large commit with no tests. The reviewer even mentions that the key:value
 parsing should be in its own function, which maybe would have made this bug
-more obvious. In any case, going forward, it&rsquo;s clear that large pieces of new
-code should be broken into smaller pices, tested thoroughly, and reviewed
-carefully.  Additionally, old code with insufficient testing coverage should
-either be tested or removed if it is no longer necessary.</p>
+more obvious. In any case, the lessons learned from this should already be
+familiar. Large pieces of new code should be broken into smaller pices, tested
+thoroughly, and reviewed carefully. Additionally, old code with insufficient
+test coverage should either be exercised by new tests or removed if it is no
+longer necessary.</p>
+
+<p>For those curious, the fix for this code consisted of null-checking <code>curve</code> and
+<code>keyPairInfo-&gt;ecPopPubKey</code> respectively before allocating and assigning to them
+new memory.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[What's All This, Then?]]></title>
+    <link href="http://mozkeeler.github.io/blog/2014/04/16/whats-all-this/"/>
+    <updated>2014-04-16T10:57:38-07:00</updated>
+    <id>http://mozkeeler.github.io/blog/2014/04/16/whats-all-this</id>
+    <content type="html"><![CDATA[<p>While working on improving Firefox security code<sup id="fnref:1"><a href="#fn:1" rel="footnote">1</a></sup>, I&rsquo;ve come across a few
+things that make me go &ldquo;Hmmm&hellip;&rdquo;. Some of these are bugs and some are
+practices that could lead to bugs, or at least make the code harder to
+maintain. I thought it would be worthwhile to share what I&rsquo;ve learned.</p>
+
+<p>Of course, I&rsquo;ve written my fair share of bugs and I&rsquo;m not immune to
+writing difficult-to-maintain code. This is in no way meant to denigrate the
+efforts of developers that have worked on this code before me. Indeed, without
+them, there would be no security code in Firefox to work on. In general, I
+won&rsquo;t be naming names or linking directly to changesets. Due to the nature of
+open source, this information is available to those who choose to look for it.
+However, my intention is not to talk about people but about process. In
+particular, if we can examine the processes that led to the code in question,
+hopefully we can improve how we currently write code, resulting in safer, more
+easily maintained code.</p>
+<div class="footnotes">
+<hr/>
+<ol>
+<li id="fn:1">
+<p>I work on code in the module formally called the &ldquo;Personal Security Manager&rdquo;. I call it the &ldquo;Privacy and Security Module&rdquo;, or just &ldquo;PSM&rdquo; for short.<a href="#fnref:1" rev="footnote">&#8617;</a></p></li>
+</ol>
+</div>
+
 ]]></content>
   </entry>
   
