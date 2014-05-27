@@ -4,7 +4,7 @@
   <title><![CDATA[mozkeeler]]></title>
   <link href="http://mozkeeler.github.io/atom.xml" rel="self"/>
   <link href="http://mozkeeler.github.io/"/>
-  <updated>2014-04-16T16:14:48-07:00</updated>
+  <updated>2014-05-27T15:35:27-07:00</updated>
   <id>http://mozkeeler.github.io/</id>
   <author>
     <name><![CDATA[David Keeler]]></name>
@@ -12,6 +12,124 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[nsConvertToActualKeyGenParams 2: Electric Boogaloo]]></title>
+    <link href="http://mozkeeler.github.io/blog/2014/04/18/nsconverttoactualkeygenparams-2-electric-boogaloo/"/>
+    <updated>2014-04-18T16:28:09-07:00</updated>
+    <id>http://mozkeeler.github.io/blog/2014/04/18/nsconverttoactualkeygenparams-2-electric-boogaloo</id>
+    <content type="html"><![CDATA[<p>As it turns out, untested code can contain multiple bugs. Here&rsquo;s some more
+of <code>nsConvertToActualKeyGenParams</code>:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='c++'><span class='line'>  <span class="k">while</span> <span class="p">(</span><span class="n">getNextNameValueFromECKeygenParamString</span><span class="p">(</span>
+</span><span class='line'>          <span class="n">next_input</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">name_len</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">value_len</span><span class="p">,</span>
+</span><span class='line'>          <span class="n">next_input</span><span class="p">))</span>
+</span><span class='line'>  <span class="p">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="n">PL_strncmp</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&quot;curve&quot;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">min</span><span class="p">(</span><span class="n">name_len</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+</span><span class='line'>    <span class="p">{</span>
+</span><span class='line'>      <span class="n">curve</span> <span class="o">=</span> <span class="n">PL_strndup</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">value_len</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">PL_strncmp</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s">&quot;popcert&quot;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">min</span><span class="p">(</span><span class="n">name_len</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+</span><span class='line'>    <span class="p">{</span>
+</span><span class='line'>      <span class="kt">char</span> <span class="o">*</span><span class="n">certstr</span> <span class="o">=</span> <span class="n">PL_strndup</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">value_len</span><span class="p">);</span>
+</span><span class='line'>      <span class="k">if</span> <span class="p">(</span><span class="n">certstr</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="n">keyPairInfo</span><span class="o">-&gt;</span><span class="n">ecPopCert</span> <span class="o">=</span> <span class="n">CERT_ConvertAndDecodeCertificate</span><span class="p">(</span><span class="n">certstr</span><span class="p">);</span>
+</span><span class='line'>        <span class="n">PL_strfree</span><span class="p">(</span><span class="n">certstr</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="n">keyPairInfo</span><span class="o">-&gt;</span><span class="n">ecPopCert</span><span class="p">)</span>
+</span><span class='line'>        <span class="p">{</span>
+</span><span class='line'>          <span class="n">keyPairInfo</span><span class="o">-&gt;</span><span class="n">ecPopPubKey</span> <span class="o">=</span> <span class="n">CERT_ExtractPublicKey</span><span class="p">(</span><span class="n">keyPairInfo</span><span class="o">-&gt;</span><span class="n">ecPopCert</span><span class="p">);</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>      <span class="p">}</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="n">keyPairInfo</span><span class="o">-&gt;</span><span class="n">ecPopPubKey</span><span class="p">)</span>
+</span><span class='line'>  <span class="p">{</span>
+</span><span class='line'>    <span class="n">returnParams</span> <span class="o">=</span> <span class="n">SECITEM_DupItem</span><span class="p">(</span><span class="o">&amp;</span><span class="n">keyPairInfo</span><span class="o">-&gt;</span><span class="n">ecPopPubKey</span><span class="o">-&gt;</span><span class="n">u</span><span class="p">.</span><span class="n">ec</span><span class="p">.</span><span class="n">DEREncodedParams</span><span class="p">);</span>
+</span><span class='line'>  <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>keyPairInfo-&gt;ecPopPubKey</code> is a <code>SECKEYPublicKey</code>:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">struct</span> <span class="n">SECKEYPublicKeyStr</span> <span class="p">{</span>
+</span><span class='line'>  <span class="n">PLArenaPool</span> <span class="o">*</span><span class="n">arena</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">KeyType</span> <span class="n">keyType</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">PK11SlotInfo</span> <span class="o">*</span><span class="n">pkcs11Slot</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">CK_OBJECT_HANDLE</span> <span class="n">pkcs11ID</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">union</span> <span class="p">{</span>
+</span><span class='line'>    <span class="n">SECKEYRSAPublicKey</span> <span class="n">rsa</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">SECKEYDSAPublicKey</span> <span class="n">dsa</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">SECKEYDHPublicKey</span>  <span class="n">dh</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">SECKEYKEAPublicKey</span> <span class="n">kea</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">SECKEYFortezzaPublicKey</span> <span class="n">fortezza</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">SECKEYECPublicKey</span>  <span class="n">ec</span><span class="p">;</span>
+</span><span class='line'>  <span class="p">}</span> <span class="n">u</span><span class="p">;</span>
+</span><span class='line'><span class="p">};</span>
+</span><span class='line'><span class="k">typedef</span> <span class="k">struct</span> <span class="n">SECKEYPublicKeyStr</span> <span class="n">SECKEYPublicKey</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Recall that <code>certstr</code> comes more or less directly from
+<code>window.crypto.generateCRMFRequest</code>, so it could be anything. This code passes
+it to <code>CERT_ConvertAndDecodeCertificate</code> and then extracts the public key into
+<code>keyPairInfo-&gt;ecPopPubKey</code>. The code then assumes that public key is an
+elliptic curve key without checking first. It turns out, this can actually
+crash Firefox.</p>
+
+<p>It would be easy to say do not use union. Indeed, modern typesystems can be
+quite helpful when different types of data can have similar operations
+performed on them. However, seeing as we have a large amount of legacy code
+that does use unions, we should probably put some effort into ensuring that
+they&rsquo;re handled safely. In particular, that means always preceding the
+de-unionification with a type check. And again, going back to writing
+meaningful tests, when code expects a certain type of input, there should be
+tests that give it something unexpected.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Leaky Input Parsing in nsConvertToActualKeyGenParams]]></title>
@@ -116,34 +234,30 @@ papercut-correctness bug. Sure, some memory could be leaked, but nobody would
 call it with nonsensical input, right? Unfortunately this is more serious than
 a local correctness issue. The input to <code>nsConvertToActualKeyGenParams</code> gets
 passed unchanged from <code>window.crypto.generateCRMFRequest</code>, meaning that any
-page could trigger this bug.</p>
+page on the internet could trigger this bug.</p>
 
 <p>Looking at the history of this code, it appears to have landed as part of a
 large commit with no tests. The reviewer even mentions that the key:value
 parsing should be in its own function, which maybe would have made this bug
-more obvious. In any case, the lessons learned from this should already be
-familiar. Large pieces of new code should be broken into smaller pices, tested
-thoroughly, and reviewed carefully. Additionally, old code with insufficient
-test coverage should either be exercised by new tests or removed if it is no
-longer necessary.</p>
+more obvious. My suggestions for how to avoid issues like this are probably
+already familiar as best practices: large patches should be broken up into
+smaller pieces, new functionality should be tested in a meaningful way, and
+reviewers should be empowered to say, &ldquo;no, this will not land until these
+requirements are met.&rdquo;</p>
 
-<p>As a colleague pointed out to me, it&rsquo;s easy to say, &ldquo;Well obviously everything
-should have thorough test-coverage.&rdquo; The real question is, why does code land
-without tests? Or, to put it positively, how can we ensure that new features
-land with tests? One suggestion is to have a publicly documented and
-agreed-upon set of standards for landing code. We do ostensibly have that at
-Mozilla, but it appears to fall apart under time pressure. Anecdotally,
+<p>My understanding is that we have already adopted these practices as an
+organization. The tricky part is making sure we adhere to them. Anecdotally,
 features in early B2G builds would often regress due to a near absence of
 tests. The engineers were obviously under a tight deadline, and I imagine it
-was a natural reaction to neglect something not seen as essential: the tests.
+was a natural reaction to neglect something not seen as essential: tests.
 So, perhaps that&rsquo;s the answer: we need to ensure buy-in to the idea that tests
 are as essential as the code itself.</p>
 
-<p>That said, I&rsquo;m not sure the presence of tests alone would have caught this bug.
-It would have required a test case with a duplicate key:value pair and some
-sort of memory-leak detection. However, the act of writing tests may have
-inspired the very question I asked early in this post, which could have led
-to finding the bug.</p>
+<p>That said, the presence of tests alone would not necessarily have caught
+this bug. It would have required a test case with a duplicate key:value pair
+and some sort of memory-leak detection. However, the act of writing tests may
+have inspired the very question I asked early in this post, which could have
+led to finding and fixing the bug.</p>
 
 <p>For those curious, the fix for this code consisted of null-checking <code>curve</code> and
 <code>keyPairInfo-&gt;ecPopPubKey</code> respectively before allocating and assigning to them

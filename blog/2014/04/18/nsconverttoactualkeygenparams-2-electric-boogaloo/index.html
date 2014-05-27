@@ -5,11 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Leaky Input Parsing in nsConvertToActualKeyGenParams - mozkeeler</title>
+  <title>nsConvertToActualKeyGenParams 2: Electric Boogaloo - mozkeeler</title>
   <meta name="author" content="David Keeler">
 
   
-  <meta name="description" content="Consider the following code (modified for clarity): 1
+  <meta name="description" content="As it turns out, untested code can contain multiple bugs. Here&rsquo;s some more
+of nsConvertToActualKeyGenParams: 1
 2
 3
 4
@@ -22,28 +23,7 @@
 11
 12
 13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35 &hellip;">
+14 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -52,7 +32,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://mozkeeler.github.io/blog/2014/04/16/leaky-input-parsing-in-nsconverttoactualkeygenparams">
+  <link rel="canonical" href="http://mozkeeler.github.io/blog/2014/04/18/nsconverttoactualkeygenparams-2-electric-boogaloo">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="mozkeeler" type="application/atom+xml">
@@ -102,7 +82,7 @@
   
   <header>
     
-      <h1 class="entry-title">Leaky Input Parsing in nsConvertToActualKeyGenParams</h1>
+      <h1 class="entry-title">nsConvertToActualKeyGenParams 2: Electric Boogaloo</h1>
     
     
       <p class="meta">
@@ -118,14 +98,15 @@
   
 
 
-<time datetime="2014-04-16T13:52:15-07:00" pubdate data-updated="true">Apr 16<span>th</span>, 2014</time>
+<time datetime="2014-04-18T16:28:09-07:00" pubdate data-updated="true">Apr 18<span>th</span>, 2014</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>Consider the following code (modified for clarity):</p>
+<div class="entry-content"><p>As it turns out, untested code can contain multiple bugs. Here&rsquo;s some more
+of <code>nsConvertToActualKeyGenParams</code>:</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -154,28 +135,7 @@
 <span class='line-number'>25</span>
 <span class='line-number'>26</span>
 <span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-</pre></td><td class='code'><pre><code class='c++'><span class='line'><span class="k">static</span> <span class="kt">void</span><span class="o">*</span>
-</span><span class='line'><span class="n">nsConvertToActualKeyGenParams</span><span class="p">(</span><span class="n">uint32_t</span> <span class="n">keyGenMech</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">params</span><span class="p">,</span>
-</span><span class='line'>                              <span class="n">uint32_t</span> <span class="n">paramLen</span><span class="p">,</span> <span class="n">int32_t</span> <span class="n">keySize</span><span class="p">,</span>
-</span><span class='line'>                              <span class="n">nsKeyPairInfo</span> <span class="o">*</span><span class="n">keyPairInfo</span><span class="p">)</span>
-</span><span class='line'><span class="p">{</span>
-</span><span class='line'>  <span class="kt">char</span> <span class="o">*</span><span class="n">curve</span> <span class="o">=</span> <span class="n">nullptr</span><span class="p">;</span>
-</span><span class='line'>  <span class="kt">char</span> <span class="o">*</span><span class="n">next_input</span> <span class="o">=</span> <span class="n">params</span><span class="p">;</span>
-</span><span class='line'>  <span class="kt">char</span> <span class="o">*</span><span class="n">name</span> <span class="o">=</span> <span class="n">nullptr</span><span class="p">;</span>
-</span><span class='line'>  <span class="kt">char</span> <span class="o">*</span><span class="n">value</span> <span class="o">=</span> <span class="n">nullptr</span><span class="p">;</span>
-</span><span class='line'>  <span class="kt">int</span> <span class="n">name_len</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span><span class='line'>  <span class="kt">int</span> <span class="n">value_len</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">while</span> <span class="p">(</span><span class="n">getNextNameValueFromECKeygenParamString</span><span class="p">(</span>
+</pre></td><td class='code'><pre><code class='c++'><span class='line'>  <span class="k">while</span> <span class="p">(</span><span class="n">getNextNameValueFromECKeygenParamString</span><span class="p">(</span>
 </span><span class='line'>          <span class="n">next_input</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">name_len</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">value_len</span><span class="p">,</span>
 </span><span class='line'>          <span class="n">next_input</span><span class="p">))</span>
 </span><span class='line'>  <span class="p">{</span>
@@ -198,59 +158,63 @@
 </span><span class='line'>    <span class="p">}</span>
 </span><span class='line'>  <span class="p">}</span>
 </span><span class='line'>
-</span><span class='line'>  <span class="c1">// further processing, etc.</span>
+</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="n">keyPairInfo</span><span class="o">-&gt;</span><span class="n">ecPopPubKey</span><span class="p">)</span>
+</span><span class='line'>  <span class="p">{</span>
+</span><span class='line'>    <span class="n">returnParams</span> <span class="o">=</span> <span class="n">SECITEM_DupItem</span><span class="p">(</span><span class="o">&amp;</span><span class="n">keyPairInfo</span><span class="o">-&gt;</span><span class="n">ecPopPubKey</span><span class="o">-&gt;</span><span class="n">u</span><span class="p">.</span><span class="n">ec</span><span class="p">.</span><span class="n">DEREncodedParams</span><span class="p">);</span>
+</span><span class='line'>  <span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>The purpose of <code>nsConvertToActualKeyGenParams</code> is to parse and process a string
-consisting of semicolon-delimited key:value pairs. The known keys are <code>"curve"</code>
-and <code>"popcert"</code>. The function <code>getNextNameValueFromECKeygenParamString</code>
-tokenizes the input. The only state that function keeps is how far along in
-<code>params</code> it has gotten. Let&rsquo;s assume there&rsquo;s nothing wrong with it. If you&rsquo;re
-the suspicious sort, you may have already noticed what can go wrong with
-<code>nsConvertToActualKeyGenParams</code>.</p>
+<p><code>keyPairInfo-&gt;ecPopPubKey</code> is a <code>SECKEYPublicKey</code>:</p>
 
-<p>What happens if a string like <code>"curve=secp521r1;curve=secp521r1"</code> is given as
-its input? <code>curve</code> will first point to a freshly-allocated copy of
-<code>"secp521r1"</code> and then it will point to another freshly-allocated copy of
-<code>"secp521r1"</code>. Of course, the issue is not efficiency &ndash; it&rsquo;s that the
-memory for that first copy has been leaked. Even worse, if multiple
-<code>"popcert"</code> values are given, each one will leak an entire <code>CERTCertificate</code>.</p>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">struct</span> <span class="n">SECKEYPublicKeyStr</span> <span class="p">{</span>
+</span><span class='line'>  <span class="n">PLArenaPool</span> <span class="o">*</span><span class="n">arena</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">KeyType</span> <span class="n">keyType</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">PK11SlotInfo</span> <span class="o">*</span><span class="n">pkcs11Slot</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">CK_OBJECT_HANDLE</span> <span class="n">pkcs11ID</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">union</span> <span class="p">{</span>
+</span><span class='line'>    <span class="n">SECKEYRSAPublicKey</span> <span class="n">rsa</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">SECKEYDSAPublicKey</span> <span class="n">dsa</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">SECKEYDHPublicKey</span>  <span class="n">dh</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">SECKEYKEAPublicKey</span> <span class="n">kea</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">SECKEYFortezzaPublicKey</span> <span class="n">fortezza</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">SECKEYECPublicKey</span>  <span class="n">ec</span><span class="p">;</span>
+</span><span class='line'>  <span class="p">}</span> <span class="n">u</span><span class="p">;</span>
+</span><span class='line'><span class="p">};</span>
+</span><span class='line'><span class="k">typedef</span> <span class="k">struct</span> <span class="n">SECKEYPublicKeyStr</span> <span class="n">SECKEYPublicKey</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
 
-<p>If this were the argument-parsing code of a locally-run, non-setuid,
-short-lived utility program, it would probably be no more than a
-papercut-correctness bug. Sure, some memory could be leaked, but nobody would
-call it with nonsensical input, right? Unfortunately this is more serious than
-a local correctness issue. The input to <code>nsConvertToActualKeyGenParams</code> gets
-passed unchanged from <code>window.crypto.generateCRMFRequest</code>, meaning that any
-page on the internet could trigger this bug.</p>
 
-<p>Looking at the history of this code, it appears to have landed as part of a
-large commit with no tests. The reviewer even mentions that the key:value
-parsing should be in its own function, which maybe would have made this bug
-more obvious. My suggestions for how to avoid issues like this are probably
-already familiar as best practices: large patches should be broken up into
-smaller pieces, new functionality should be tested in a meaningful way, and
-reviewers should be empowered to say, &ldquo;no, this will not land until these
-requirements are met.&rdquo;</p>
+<p>Recall that <code>certstr</code> comes more or less directly from
+<code>window.crypto.generateCRMFRequest</code>, so it could be anything. This code passes
+it to <code>CERT_ConvertAndDecodeCertificate</code> and then extracts the public key into
+<code>keyPairInfo-&gt;ecPopPubKey</code>. The code then assumes that public key is an
+elliptic curve key without checking first. It turns out, this can actually
+crash Firefox.</p>
 
-<p>My understanding is that we have already adopted these practices as an
-organization. The tricky part is making sure we adhere to them. Anecdotally,
-features in early B2G builds would often regress due to a near absence of
-tests. The engineers were obviously under a tight deadline, and I imagine it
-was a natural reaction to neglect something not seen as essential: tests.
-So, perhaps that&rsquo;s the answer: we need to ensure buy-in to the idea that tests
-are as essential as the code itself.</p>
-
-<p>That said, the presence of tests alone would not necessarily have caught
-this bug. It would have required a test case with a duplicate key:value pair
-and some sort of memory-leak detection. However, the act of writing tests may
-have inspired the very question I asked early in this post, which could have
-led to finding and fixing the bug.</p>
-
-<p>For those curious, the fix for this code consisted of null-checking <code>curve</code> and
-<code>keyPairInfo-&gt;ecPopPubKey</code> respectively before allocating and assigning to them
-new memory.</p>
+<p>It would be easy to say do not use union. Indeed, modern typesystems can be
+quite helpful when different types of data can have similar operations
+performed on them. However, seeing as we have a large amount of legacy code
+that does use unions, we should probably put some effort into ensuring that
+they&rsquo;re handled safely. In particular, that means always preceding the
+de-unionification with a type check. And again, going back to writing
+meaningful tests, when code expects a certain type of input, there should be
+tests that give it something unexpected.</p>
 </div>
 
 
@@ -273,7 +237,7 @@ new memory.</p>
   
 
 
-<time datetime="2014-04-16T13:52:15-07:00" pubdate data-updated="true">Apr 16<span>th</span>, 2014</time>
+<time datetime="2014-04-18T16:28:09-07:00" pubdate data-updated="true">Apr 18<span>th</span>, 2014</time>
       
 
 
@@ -281,7 +245,7 @@ new memory.</p>
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://mozkeeler.github.io/blog/2014/04/16/leaky-input-parsing-in-nsconverttoactualkeygenparams/" data-via="mozkeeler" data-counturl="http://mozkeeler.github.io/blog/2014/04/16/leaky-input-parsing-in-nsconverttoactualkeygenparams/" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://mozkeeler.github.io/blog/2014/04/18/nsconverttoactualkeygenparams-2-electric-boogaloo/" data-via="mozkeeler" data-counturl="http://mozkeeler.github.io/blog/2014/04/18/nsconverttoactualkeygenparams-2-electric-boogaloo/" >Tweet</a>
   
   
   
@@ -290,10 +254,8 @@ new memory.</p>
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2014/04/16/whats-all-this/" title="Previous Post: What's all this, then?">&laquo; What's all this, then?</a>
+        <a class="basic-alignment left" href="/blog/2014/04/16/leaky-input-parsing-in-nsconverttoactualkeygenparams/" title="Previous Post: Leaky Input Parsing in  nsConvertToActualKeyGenParams">&laquo; Leaky Input Parsing in  nsConvertToActualKeyGenParams</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2014/04/18/nsconverttoactualkeygenparams-2-electric-boogaloo/" title="Next Post: nsConvertToActualKeyGenParams 2: Electric Boogaloo">nsConvertToActualKeyGenParams 2: Electric Boogaloo &raquo;</a>
       
     </p>
   </footer>
