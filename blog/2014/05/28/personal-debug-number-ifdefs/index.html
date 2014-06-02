@@ -5,12 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>What's All This, Then? - mozkeeler</title>
+  <title>Personal Debug #ifdefs - mozkeeler</title>
   <meta name="author" content="David Keeler">
 
   
-  <meta name="description" content="While working on improving Firefox security code1, I&rsquo;ve come across a few
-things that make me go &ldquo;Hmmm&hellip;&rdquo;. Some of these are &hellip;">
+  <meta name="description" content="In looking at PSM code, I&rsquo;ve come across a practice that struck me as
+undesirable. In the middle of some code I was attempting to understand &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +19,7 @@ things that make me go &ldquo;Hmmm&hellip;&rdquo;. Some of these are &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://mozkeeler.github.io/blog/2014/04/16/whats-all-this">
+  <link rel="canonical" href="http://mozkeeler.github.io/blog/2014/05/28/personal-debug-number-ifdefs">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="mozkeeler" type="application/atom+xml">
@@ -69,7 +69,7 @@ things that make me go &ldquo;Hmmm&hellip;&rdquo;. Some of these are &hellip;">
   
   <header>
     
-      <h1 class="entry-title">What's All This, Then?</h1>
+      <h1 class="entry-title">Personal Debug #ifdefs</h1>
     
     
       <p class="meta">
@@ -85,36 +85,55 @@ things that make me go &ldquo;Hmmm&hellip;&rdquo;. Some of these are &hellip;">
   
 
 
-<time datetime="2014-04-16T10:57:38-07:00" pubdate data-updated="true">Apr 16<span>th</span>, 2014</time>
+<time datetime="2014-05-28T16:55:17-07:00" pubdate data-updated="true">May 28<span>th</span>, 2014</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>While working on improving Firefox security code<sup id="fnref:1"><a href="#fn:1" rel="footnote">1</a></sup>, I&rsquo;ve come across a few
-things that make me go &ldquo;Hmmm&hellip;&rdquo;. Some of these are bugs and some are
-practices that could lead to bugs, or at least make the code harder to
-maintain. I thought it would be worthwhile to share what I&rsquo;ve learned.</p>
+<div class="entry-content"><p>In looking at PSM code, I&rsquo;ve come across a practice that struck me as
+undesirable. In the middle of some code I was attempting to understand stood
+the line <code>#ifdef DEBUG_handle</code>, where <code>handle</code> was the IRC nickname of a
+developer no longer involved with Mozilla. My inference is that this developer
+essentially checked in to the tree a debug mode personally tailored to the work
+they were doing. I think this is problematic for a few reasons.</p>
 
-<p>Of course, I&rsquo;ve written my fair share of bugs and I&rsquo;m not immune to
-writing difficult-to-maintain code. This is in no way meant to denigrate the
-efforts of developers that have worked on this code before me. Indeed, without
-them, there would be no security code in Firefox to work on. In general, I
-won&rsquo;t be naming names or linking directly to changesets. Due to the nature of
-open source, this information is available to those who choose to look for it.
-However, my intention is not to talk about people but about process. In
-particular, if we can examine the processes that led to the code in question,
-hopefully we can improve how we currently write code, resulting in safer, more
-easily maintained code.</p>
-<div class="footnotes">
-<hr/>
-<ol>
-<li id="fn:1">
-<p>I work on code in the module formally called the &ldquo;Personal Security Manager&rdquo;. I call it the &ldquo;Privacy and Security Module&rdquo;, or just &ldquo;PSM&rdquo; for short.<a href="#fnref:1" rev="footnote">&#8617;</a></p></li>
-</ol>
-</div>
+<p>First, using the pre-processor to optionally include extra code not normally
+tested or even run means other changes can easily break it. This allows broken
+(and even un-compilable) code to persist long after it should have been fixed
+or removed.</p>
 
+<p>Second, using a personalized debug flag increases the difficulty for others
+involved with the affected code. At best, it requires others to know of this
+undocumented extra functionality for it to be useful. At worst, it obfucates
+the meaning of the code and confuses developers unfamiliar with it.
+Furthermore, when the developer who added it ceases involvement with Mozilla,
+this orphaned code will be left to rot forever, without anyone knowing that it
+exists. This isn&rsquo;t a sentimental issue &ndash; the more cruft the tree collects, the
+harder it becomes to maintain.</p>
+
+<p>Development does often require conditionally enabling additional debugging
+output. Luckily for Gecko hackers, we already have a logging infrastructure
+where different modules can be told to spew varying levels of debugging
+information via environment variables.
+This is <a href="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSPR/Reference/Logging">NSPR logging</a>,
+and it&rsquo;s enabled by default in debug builds. Compared to personal debug
+#ifdefs (which are undocumented and require first determining the correct
+build flags and then rebuilding the tree from scratch), NSPR logging is much
+more versatile.</p>
+
+<p>Finally, this practice is unprofessional. For similar reasons as to why we
+don&rsquo;t check in debugging printfs left over from the development process and why
+we adhere to a particular coding style, code specific to one developer should
+never be added to a public project being worked on by many people.</p>
+
+<p>When I started writing this post, I was worried this would be seen as a
+personal issue since I only knew of one developer who engaged in this practice.
+As it turns out, many Mozilla developers have checked in their own <code>#ifdef
+DEBUG_handle</code>, including coders I know and respect. Perhaps they have some
+counter-points to what I&rsquo;ve brought up here. However, while I won&rsquo;t be removing
+all such cases across the tree, I do intend to stop this practice in PSM code.</p>
 </div>
 
 
@@ -137,7 +156,7 @@ easily maintained code.</p>
   
 
 
-<time datetime="2014-04-16T10:57:38-07:00" pubdate data-updated="true">Apr 16<span>th</span>, 2014</time>
+<time datetime="2014-05-28T16:55:17-07:00" pubdate data-updated="true">May 28<span>th</span>, 2014</time>
       
 
 
@@ -145,7 +164,7 @@ easily maintained code.</p>
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://mozkeeler.github.io/blog/2014/04/16/whats-all-this/" data-via="mozkeeler" data-counturl="http://mozkeeler.github.io/blog/2014/04/16/whats-all-this/" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://mozkeeler.github.io/blog/2014/05/28/personal-debug-number-ifdefs/" data-via="mozkeeler" data-counturl="http://mozkeeler.github.io/blog/2014/05/28/personal-debug-number-ifdefs/" >Tweet</a>
   
   
   
@@ -154,8 +173,8 @@ easily maintained code.</p>
     
     <p class="meta">
       
+        <a class="basic-alignment left" href="/blog/2014/04/18/nsconverttoactualkeygenparams-2-electric-boogaloo/" title="Previous Post: nsConvertToActualKeyGenParams 2: Electric Boogaloo">&laquo; nsConvertToActualKeyGenParams 2: Electric Boogaloo</a>
       
-        <a class="basic-alignment right" href="/blog/2014/04/16/leaky-input-parsing-in-nsconverttoactualkeygenparams/" title="Next Post: Leaky Input Parsing in  nsConvertToActualKeyGenParams">Leaky Input Parsing in  nsConvertToActualKeyGenParams &raquo;</a>
       
     </p>
   </footer>

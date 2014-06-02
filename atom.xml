@@ -4,7 +4,7 @@
   <title><![CDATA[mozkeeler]]></title>
   <link href="http://mozkeeler.github.io/atom.xml" rel="self"/>
   <link href="http://mozkeeler.github.io/"/>
-  <updated>2014-05-27T15:35:27-07:00</updated>
+  <updated>2014-06-02T16:37:05-07:00</updated>
   <id>http://mozkeeler.github.io/</id>
   <author>
     <name><![CDATA[David Keeler]]></name>
@@ -12,6 +12,56 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Personal Debug #ifdefs]]></title>
+    <link href="http://mozkeeler.github.io/blog/2014/05/28/personal-debug-number-ifdefs/"/>
+    <updated>2014-05-28T16:55:17-07:00</updated>
+    <id>http://mozkeeler.github.io/blog/2014/05/28/personal-debug-number-ifdefs</id>
+    <content type="html"><![CDATA[<p>In looking at PSM code, I&rsquo;ve come across a practice that struck me as
+undesirable. In the middle of some code I was attempting to understand stood
+the line <code>#ifdef DEBUG_handle</code>, where <code>handle</code> was the IRC nickname of a
+developer no longer involved with Mozilla. My inference is that this developer
+essentially checked in to the tree a debug mode personally tailored to the work
+they were doing. I think this is problematic for a few reasons.</p>
+
+<p>First, using the pre-processor to optionally include extra code not normally
+tested or even run means other changes can easily break it. This allows broken
+(and even un-compilable) code to persist long after it should have been fixed
+or removed.</p>
+
+<p>Second, using a personalized debug flag increases the difficulty for others
+involved with the affected code. At best, it requires others to know of this
+undocumented extra functionality for it to be useful. At worst, it obfucates
+the meaning of the code and confuses developers unfamiliar with it.
+Furthermore, when the developer who added it ceases involvement with Mozilla,
+this orphaned code will be left to rot forever, without anyone knowing that it
+exists. This isn&rsquo;t a sentimental issue &ndash; the more cruft the tree collects, the
+harder it becomes to maintain.</p>
+
+<p>Development does often require conditionally enabling additional debugging
+output. Luckily for Gecko hackers, we already have a logging infrastructure
+where different modules can be told to spew varying levels of debugging
+information via environment variables.
+This is <a href="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSPR/Reference/Logging">NSPR logging</a>,
+and it&rsquo;s enabled by default in debug builds. Compared to personal debug
+#ifdefs (which are undocumented and require first determining the correct
+build flags and then rebuilding the tree from scratch), NSPR logging is much
+more versatile.</p>
+
+<p>Finally, this practice is unprofessional. For similar reasons as to why we
+don&rsquo;t check in debugging printfs left over from the development process and why
+we adhere to a particular coding style, code specific to one developer should
+never be added to a public project being worked on by many people.</p>
+
+<p>When I started writing this post, I was worried this would be seen as a
+personal issue since I only knew of one developer who engaged in this practice.
+As it turns out, many Mozilla developers have checked in their own <code>#ifdef
+DEBUG_handle</code>, including coders I know and respect. Perhaps they have some
+counter-points to what I&rsquo;ve brought up here. However, while I won&rsquo;t be removing
+all such cases across the tree, I do intend to stop this practice in PSM code.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[nsConvertToActualKeyGenParams 2: Electric Boogaloo]]></title>
