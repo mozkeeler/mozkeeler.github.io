@@ -4,7 +4,7 @@
   <title><![CDATA[mozkeeler]]></title>
   <link href="http://mozkeeler.github.io/atom.xml" rel="self"/>
   <link href="http://mozkeeler.github.io/"/>
-  <updated>2014-06-02T16:37:05-07:00</updated>
+  <updated>2014-06-04T10:57:41-07:00</updated>
   <id>http://mozkeeler.github.io/</id>
   <author>
     <name><![CDATA[David Keeler]]></name>
@@ -12,6 +12,25 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[History Lessons]]></title>
+    <link href="http://mozkeeler.github.io/blog/2014/06/03/history-lessons/"/>
+    <updated>2014-06-03T16:01:27-07:00</updated>
+    <id>http://mozkeeler.github.io/blog/2014/06/03/history-lessons</id>
+    <content type="html"><![CDATA[<p>This is a quick follow-up to my <a href="http://mozkeeler.github.io/blog/2014/05/28/personal-debug-number-ifdefs/">previous post</a>.
+As a possible corrolary to <a href="http://meta.wikimedia.org/wiki/Cunningham%27s_Law">Cunningham&rsquo;s Law</a>,
+it seems the best way to learn about the past on the Internet is to write an
+uninformed blog post and have colleagues on Twitter fill you in.
+Apparently using <code>#ifdef DEBUG_&lt;person&gt;</code> was common and even supported by
+default by the build system (it would grab your login name and automatically
+define DEBUG_&lt;login>). There&rsquo;s a mozilla.dev.platform discussion about
+removing it <a href="https://groups.google.com/forum/#!topic/mozilla.dev.platform/sL7bHH2zD1s">here</a>
+and two <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=561674">related</a>
+<a href="https://bugzilla.mozilla.org/show_bug.cgi?id=565191">bugs</a> for anyone
+interested in the historical background.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Personal Debug #ifdefs]]></title>
