@@ -1,0 +1,326 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>My Weekend With PAM - mozkeeler</title>
+  <meta name="author" content="">
+
+  
+  <meta name="description" content="And now for something completely different: a man with a Yubico U2F key. Yubico manufactures some
+hardware devices that implement various &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="https://mozkeeler.github.io/blog/2015/02/02/my-weekend-with-pam">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="mozkeeler" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">mozkeeler</a></h1>
+  
+    <h2>Adventures at Mozilla</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:mozkeeler.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">My Weekend With PAM</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-02-02T16:48:28-08:00" pubdate data-updated="true"></time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>And now for something completely different: a man with a Yubico U2F key. Yubico manufactures some
+hardware devices that implement various functionality like two-factor authentication,
+one-time-passwords, and more generic hardware-security-modules, etc. if I understand correctly. The
+U2F device is intended to be a &ldquo;universal two-factor&rdquo; product. Currently it&rsquo;s only supported in
+Chrome. (That&rsquo;s part of why I have one - to see if Firefox can support this need for our users in a
+way that&rsquo;s consistent with our mission.)</p>
+
+<p>As part of familiarizing myself with the capabilities of the device, I checked out a few
+repositories and found that with the addition of some udev rules, the device pretty much &ldquo;just
+works&rdquo; as advertized. What it does is you register an application/origin/user on the device, which
+spits back some JSON that you store on the &ldquo;server&rdquo;. Then, to authenticate to the server, you ask
+it for a challenge, pipe that to a program that communicates with the device, and pipe the response
+back to the server. If the math works out, the server is sufficiently convinced that you&rsquo;re in
+possession of the device.</p>
+
+<p>As I was fiddling around with these libraries, I thought, &ldquo;well, this is great, but what am I
+actually going to use it for?&rdquo;. I don&rsquo;t run any sites at the moment, so it seemed like more work
+than I wanted to do to set up a demo site and cobble together some sort of out-of-band
+authentication (since Firefox doesn&rsquo;t support the device). Then, it occurred to me (or maybe I just
+saw it in the documentation) that the U2F device can be used with a pluggable authentication module
+(PAM) to authenticate a user to a system. I&rsquo;m a user. I have systems I authenticate to. This seemed
+perfect. As an additional bonus, Yubico has already written such a module, so I didn&rsquo;t have to.</p>
+
+<!--more-->
+
+
+<p>After some false starts, I did get the PAM working with the U2F device. Since it wasn&rsquo;t quite as
+easy as <code>wget http://insecure.url | sudo sh</code>, I figured it might be helpful to document what it
+took to go from a system that didn&rsquo;t usefully recognize the device to being able to login with the
+touch of a button. (Note that these instructions are for Fedora 20. As the ancient saying goes,
+your mileage may vary.)</p>
+
+<h4>udev rules</h4>
+
+<p>Start by putting <a href="https://github.com/Yubico/libu2f-host/blob/master/70-u2f.rules">70-u2f.rules</a> in
+<code>/etc/udev/rules.d</code> and restarting. If successful, you&rsquo;ll probably see something like so in
+<code>dmesg</code> when you insert the device:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>[26764.737757] hid-generic 0003:1050:0120.0011: hiddev0,hidraw3: USB HID v1.10 Device [Yubico Security Key by Yubico] on usb-0000:00:14.0-2/input0</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If that doesn&rsquo;t work, maybe you need to <code>sudo yum install hidapi</code> (and you might as well <code>sudo yum
+install hidapi-devel</code>, since you&rsquo;ll need that later).</p>
+
+<h4>libu2f-host and libu2f-server</h4>
+
+<p>Yubico has written two main libraries that back U2F:
+<a href="https://github.com/Yubico/libu2f-host">libu2f-host</a> and
+<a href="https://github.com/Yubico/libu2f-server">libu2f-server</a>. You should be able to <code>git clone</code> them,
+followed by <code>autoreconf --install</code>, <code>./configure</code>, <code>make check</code>, and <code>sudo make install</code>. This will
+put them into <code>/usr/local/</code>. The dependencies I had to install were <code>gtk-doc</code>, <code>gengetopt</code>,
+<code>help2man</code>, and <code>json-c-devel</code>.</p>
+
+<h4>pam_u2f.so</h4>
+
+<p>As I mentioned before, Yubico has written the PAM: <a href="https://github.com/Yubico/pam-u2f">pam-u2f</a>.
+<code>git clone</code> that, then <code>autoreconf --install</code>, <code>./configure</code>, and <code>make check</code>. I had to install
+<code>pam-devel</code> and <code>asciidoc</code> as dependencies.</p>
+
+<p>This is where I ran into my first mystifying issue. I had installed libu2f-host and libu2f-server,
+but configure (or rather pkg-config) claimed it couldn&rsquo;t find the libraries. After some fiddling
+around, I ran <code>pkg-config --debug u2f-host</code> and found that it wasn&rsquo;t looking in
+<code>/usr/local/lib/pkgconfig</code>, which is where libu2f-host and libu2f-server had installed their
+pkg-config files. I&rsquo;m sure there&rsquo;s a proper way to fix this, but I just chose a folder where
+pkg-config was looking and symlinked the .pc files there:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>ln -s /usr/local/lib/pkgconfig/u2f-*.pc /usr/share/pkgconfig/</span></code></pre></td></tr></table></div></figure>
+
+
+<p>After that configure worked fine.</p>
+
+<p>After building, pam_u2f.so was in .lib. To
+enable PAM to use it, I copied it to /lib/security: <code>cp
+.lib/pam_u2f.so /lib/security</code>.</p>
+
+<h4>Registering the U2F</h4>
+
+<p>Before a device can authenticate itself to something using pam_u2f.so, it has to be registered.
+There&rsquo;s a handy utility in that same repo called <code>pamu2fcfg</code>. That gets built along with the PAM
+itself. You can specify an origin, appid, and username to register for, but I found that specifying
+an origin didn&rsquo;t work (I didn&rsquo;t look too hard into what was going wrong, so it may just have been
+me). Also, the username defaults to the current user, so in most cases you don&rsquo;t need to specify
+it. <code>./pamu2fcfg</code> dumps out a string that should go in <code>~/.yubico/u2f_keys</code> (there&rsquo;s another way to
+do this part, but this is easiest - see the Yubico documentation if you&rsquo;re curious).</p>
+
+<h4>PAM</h4>
+
+<p>The documentation for pam-u2f is a little vague on how to actually use pam_u2f.so for things like
+logging in, unlocking gdm, or sudo. I found it worked if I added <code>auth sufficient pam_u2f.so</code> to
+the top of <code>/etc/pam.d/system-auth</code> and <code>/etc/pam.d/gdm-password</code> (try adding &ldquo;debug&rdquo; to the end of
+that line and running sudo for an idea of what&rsquo;s going on under the hood). The former handles many
+scenarios like terminal login and sudo (I believe) while the latter does gdm login and unlocking
+the screen.  Unfortunately, <code>/etc/pam.d/system-auth</code> says this:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'># This file is auto-generated.
+</span><span class='line'># User changes will be destroyed the next time authconfig is run.</span></code></pre></td></tr></table></div></figure>
+
+
+<p>so maybe this solution won&rsquo;t stick, but at least I know where to look in the future.</p>
+
+<h4>&ldquo;sufficient&rdquo; vs. &ldquo;required&rdquo;</h4>
+
+<p>Using &ldquo;sufficient&rdquo; causes the system to consider any authorization attempt as my regular user
+successful with the touch of the button on the U2F device. This is not the safest way to run a
+system. Using &ldquo;required&rdquo; instead causes the device to act more as it was intended (i.e. as a
+second factor authentication token). This is great for security, but I better hope I don&rsquo;t lose the
+device or it breaks (I could get two, register them both, and keep the second as a backup as
+suggested by this
+<a href="http://crashoverridenetwork.tumblr.com/post/109948061867/account-security-101-passwords-multifactor">article</a>).</p>
+
+<p>And that&rsquo;s how my weekend went.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-02-02T16:48:28-08:00" pubdate data-updated="true"></time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="https://mozkeeler.github.io/blog/2015/02/02/my-weekend-with-pam/" data-via="" data-counturl="https://mozkeeler.github.io/blog/2015/02/02/my-weekend-with-pam/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/06/03/history-lessons/" title="Previous Post: History Lessons">&laquo; History Lessons</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/02/02/my-weekend-with-pam/">My Weekend With PAM</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/06/03/history-lessons/">History Lessons</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/28/personal-debug-number-ifdefs/">Personal Debug #ifdefs</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/18/nsconverttoactualkeygenparams-2-electric-boogaloo/">nsConvertToActualKeyGenParams 2: Electric Boogaloo</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/16/leaky-input-parsing-in-nsconverttoactualkeygenparams/">Leaky Input Parsing in nsConvertToActualKeyGenParams</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 -  -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
