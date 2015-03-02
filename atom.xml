@@ -2,12 +2,12 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[mozkeeler]]></title>
-  <link href="https://mozkeeler.github.io/atom.xml" rel="self"/>
-  <link href="https://mozkeeler.github.io/"/>
-  <updated>2015-03-02T15:18:11-08:00</updated>
-  <id>https://mozkeeler.github.io/</id>
+  <link href="http://mozkeeler.github.io/atom.xml" rel="self"/>
+  <link href="http://mozkeeler.github.io/"/>
+  <updated>2015-03-02T15:31:25-08:00</updated>
+  <id>http://mozkeeler.github.io/</id>
   <author>
-    <name><![CDATA[]]></name>
+    <name><![CDATA[David Keeler]]></name>
     
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[My Weekend With PAM]]></title>
-    <link href="https://mozkeeler.github.io/blog/2015/02/02/my-weekend-with-pam/"/>
+    <link href="http://mozkeeler.github.io/blog/2015/02/02/my-weekend-with-pam/"/>
     <updated>2015-02-02T16:48:28-08:00</updated>
-    <id>https://mozkeeler.github.io/blog/2015/02/02/my-weekend-with-pam</id>
+    <id>http://mozkeeler.github.io/blog/2015/02/02/my-weekend-with-pam</id>
     <content type="html"><![CDATA[<p>And now for something completely different: a man with a Yubico U2F key. Yubico manufactures some
 hardware devices that implement various functionality like two-factor authentication,
 one-time-passwords, and more generic hardware-security-modules, etc. if I understand correctly. The
@@ -138,10 +138,10 @@ suggested by this
   
   <entry>
     <title type="html"><![CDATA[History Lessons]]></title>
-    <link href="https://mozkeeler.github.io/blog/2014/06/03/history-lessons/"/>
+    <link href="http://mozkeeler.github.io/blog/2014/06/03/history-lessons/"/>
     <updated>2014-06-03T16:01:27-07:00</updated>
-    <id>https://mozkeeler.github.io/blog/2014/06/03/history-lessons</id>
-    <content type="html"><![CDATA[<p>This is a quick follow-up to my <a href="https://mozkeeler.github.io/blog/2014/05/28/personal-debug-number-ifdefs/">previous post</a>.
+    <id>http://mozkeeler.github.io/blog/2014/06/03/history-lessons</id>
+    <content type="html"><![CDATA[<p>This is a quick follow-up to my <a href="http://mozkeeler.github.io/blog/2014/05/28/personal-debug-number-ifdefs/">previous post</a>.
 As a possible corrolary to <a href="http://meta.wikimedia.org/wiki/Cunningham%27s_Law">Cunningham&rsquo;s Law</a>,
 it seems the best way to learn about the past on the Internet is to write an
 uninformed blog post and have colleagues on Twitter fill you in.
@@ -157,9 +157,9 @@ interested in the historical background.</p>
   
   <entry>
     <title type="html"><![CDATA[Personal Debug #ifdefs]]></title>
-    <link href="https://mozkeeler.github.io/blog/2014/05/28/personal-debug-number-ifdefs/"/>
+    <link href="http://mozkeeler.github.io/blog/2014/05/28/personal-debug-number-ifdefs/"/>
     <updated>2014-05-28T16:55:17-07:00</updated>
-    <id>https://mozkeeler.github.io/blog/2014/05/28/personal-debug-number-ifdefs</id>
+    <id>http://mozkeeler.github.io/blog/2014/05/28/personal-debug-number-ifdefs</id>
     <content type="html"><![CDATA[<p>In looking at PSM code, I&rsquo;ve come across a practice that struck me as
 undesirable. In the middle of some code I was attempting to understand stood
 the line <code>#ifdef DEBUG_handle</code>, where <code>handle</code> was the IRC nickname of a
@@ -207,9 +207,9 @@ all such cases across the tree, I do intend to stop this practice in PSM code.</
   
   <entry>
     <title type="html"><![CDATA[nsConvertToActualKeyGenParams 2: Electric Boogaloo]]></title>
-    <link href="https://mozkeeler.github.io/blog/2014/04/18/nsconverttoactualkeygenparams-2-electric-boogaloo/"/>
+    <link href="http://mozkeeler.github.io/blog/2014/04/18/nsconverttoactualkeygenparams-2-electric-boogaloo/"/>
     <updated>2014-04-18T16:28:09-07:00</updated>
-    <id>https://mozkeeler.github.io/blog/2014/04/18/nsconverttoactualkeygenparams-2-electric-boogaloo</id>
+    <id>http://mozkeeler.github.io/blog/2014/04/18/nsconverttoactualkeygenparams-2-electric-boogaloo</id>
     <content type="html"><![CDATA[<p>As it turns out, untested code can contain multiple bugs. Here&rsquo;s some more
 of <code>nsConvertToActualKeyGenParams</code>:</p>
 
@@ -325,9 +325,9 @@ tests that give it something unexpected.</p>
   
   <entry>
     <title type="html"><![CDATA[Leaky Input Parsing in nsConvertToActualKeyGenParams]]></title>
-    <link href="https://mozkeeler.github.io/blog/2014/04/16/leaky-input-parsing-in-nsconverttoactualkeygenparams/"/>
+    <link href="http://mozkeeler.github.io/blog/2014/04/16/leaky-input-parsing-in-nsconverttoactualkeygenparams/"/>
     <updated>2014-04-16T13:52:15-07:00</updated>
-    <id>https://mozkeeler.github.io/blog/2014/04/16/leaky-input-parsing-in-nsconverttoactualkeygenparams</id>
+    <id>http://mozkeeler.github.io/blog/2014/04/16/leaky-input-parsing-in-nsconverttoactualkeygenparams</id>
     <content type="html"><![CDATA[<p>Consider the following code (modified for clarity):</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
@@ -459,9 +459,9 @@ new memory.</p>
   
   <entry>
     <title type="html"><![CDATA[What's All This, Then?]]></title>
-    <link href="https://mozkeeler.github.io/blog/2014/04/16/whats-all-this/"/>
+    <link href="http://mozkeeler.github.io/blog/2014/04/16/whats-all-this/"/>
     <updated>2014-04-16T10:57:38-07:00</updated>
-    <id>https://mozkeeler.github.io/blog/2014/04/16/whats-all-this</id>
+    <id>http://mozkeeler.github.io/blog/2014/04/16/whats-all-this</id>
     <content type="html"><![CDATA[<p>While working on improving Firefox security code<sup id="fnref:1"><a href="#fn:1" rel="footnote">1</a></sup>, I&rsquo;ve come across a few
 things that make me go &ldquo;Hmmm&hellip;&rdquo;. Some of these are bugs and some are
 practices that could lead to bugs, or at least make the code harder to
