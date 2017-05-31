@@ -1,0 +1,135 @@
+<p style="text-align:center;"> <strong>The &ldquo;Deployment Checker&rdquo;</strong></p>
+
+<p style="text-align:center;"> <strong>- or -</strong></p>
+
+<p style="text-align:center;"> <strong>How I Learned to Stop Worrying and Blame Bad RAM</strong></p>
+
+<p style="text-align:center;"> David Keeler, Security Engineering, Mozilla</p>
+
+<p style="text-align:center;"> April 2017</p>
+
+<h3>Background</h3>
+
+<p>For the past few quarters, the Security Engineering team has been tasked with deprecating the use of SHA-1 in TLS server certificate signatures. Due to the lagging nature of public key infrastructure implementations that are not part of our Certificate Authority program, our intended policy (now implemented and shipped in Firefox) was to only forbid SHA-1 in signatures on certificates issued by roots in our program. We anticipated two areas of potential interoperability issues: 1. sites with long-lived SHA-1 certificates (issued before the Baseline Requirements limited the validity period of certificates) that were still valid in 2017 and 2. TLS intercepting proxies signing certificates using SHA-1 with an intermediate issued by a root in our program. Case 1 would be handled as far as was possible by the TLS Canary scanning popular sites with pre-release versions of Firefox and noting failures. To address case 2, we developed a telemetry study that would ping a Mozilla site (telemetry.mozilla.org) and report back the hashes of the certificates in the resulting chain. After deploying this study to a subset of users, we found no evidence of this behavior and proceeded with the staged roll-out that would disable SHA-1.</p>
+
+<p>To implement the roll-out, we developed a system add-on that acted very similarly to the telemetry study. The add-on would ping telemetry.mozilla.org to determine if it was safe from a compatibility standpoint to disable SHA-1. If so, it changed a preference in a percentage of users that caused their profile to no longer accept SHA-1 in signatures on certificates that are part of the public web PKI. Eventually that percentage was increased to include all users. In the meantime, the add-on would report its findings. During this process, we found reports that indicated a small number of users had encountered valid certificates for telemetry.mozilla.org that did not match the expected certificate. More troubling, when we attempted to determine exactly which certificates they had encountered, we could find no evidence of such certificates ever being issued. All public sources (certificate transparency logs, censys.io, etc.) returned no matches, and even the CA claimed no knowledge of certificates with the hashes we received.</p>
+
+<p>Clearly something was afoot.</p>
+
+<h3>Enter the &ldquo;Deployment Checker&rdquo;</h3>
+
+<p>To solve the mystery, we determined that we would need the actual certificates these users had encountered, and not just the hashes. With no way to reach the same users again, we re-worked the original add-on to send back more information. At the same time, we figured it would be worthwhile to check other Mozilla sites, as perhaps someone was impersonating more than just telemetry.mozilla.org. The re-worked add-on caused around 450 million reports to be sent back, the vast majority of which reported that users were seeing the certificates that Mozilla had deployed (or their connections were being intercepted by a root not in our CA program). In short, that everything was as expected. However, a few thousand users had different stories.</p>
+
+<ol>
+<li><p>Old Certificates and Stale DNS</p>
+
+<p> For six hosts (support.mozilla.org, telemetry.mozilla.org, download-installer.cdn.mozilla.net, push.services.mozilla.com, search.services.mozilla.com, and shavar.services.mozilla.com), some users reached servers using certificates owned by Mozilla that are not in production use any longer. For support.mozilla.org, my understanding is that we are deliberately keeping the old servers running until we&rsquo;re confident no one is reaching them. For the remaining hosts, the situation is similar - no current DNS information directs users to these servers, but they are still running using old certificates (in the case of these servers, it&rsquo;s not clear that this is a deliberate choice, but that&rsquo;s outside our purview). Presumably the users that encountered these servers were acting on extremely stale DNS information or some other network effect that routed them to these old servers. As there is no indication that we have lost control of these servers and certificates, there is no security concern here.</p></li>
+<li><p>Imported Roots Acting Like Built-In Roots</p>
+
+<p> As alluded to above, some of our security policies depend on whether or not the root certificate of a certificate chain is part of our CA program (a &ldquo;built-in&rdquo;). Thus, we have to have some way of distinguishing user-imported roots from built-in roots. Currently certificates in Firefox are backed by PKCS#11 modules. The built-in root module includes an object with the class &ldquo;CKO_NETSCAPE_BUILTIN_ROOT_LIST&rdquo; (which has the value 0xCE534354). In Firefox 52 (the version the add-on targeted), to determine if a given certificate is a built-in, the platform interrogates each token the certificate is present on. If any of them also have this special object, Firefox considers the certificate a built-in.</p>
+
+<p> When gathering information, if the add-on determined that it had encountered a certificate chain rooted by a certificate that was not built-in, it wouldn&rsquo;t bother reporting it, because in those cases a chain mismatch would be both expected and uninteresting for our purposes. Nevertheless, we received a number of reports rooted by certificates that were clearly not built-in roots.</p>
+
+<p> The PKCS#11 specification notes that &ldquo;Object classes CKO_VENDOR_DEFINED [0x80000000] and above are permanently reserved for token vendors. For interoperability, vendors should register their object classes through the PKCS process&rdquo; [0]. However, it&rsquo;s not clear that this was done with the range of values NSS uses. Consequently, it may be the case that other vendors have used the same range of values for their own purposes. For the users that submitted these reports, when Firefox looked at the tokens the root certificates were on, it may have coincidentally encountered an object with a class value of 0xCE534354 and incorrectly concluded that that module was the one that provided the default built-in roots.</p>
+
+<p> The security checks done by the certificate verification engine are more strict when the root is a built-in. Thus, situations where the platform erroneously identifies a non-built-in as a built-in are not a security concern. However, there are places where other parts of the platform require that the root certificate of a chain be a built-in (e.g. updating the blocklist, add-on installation/updates). In these cases, if the platform considered certificates from a 3rd party PKCS#11 module to be built-in, it would be a security concern. That said, loading a 3rd party PKCS#11 module already allows arbitrary code execution, so even if we prevented this behavior the user would still be vulnerable to a malicious module.</p></li>
+<li><p>Expected Certificate Chains and Flipped Bits</p>
+
+<p> Some of the reports consisted of certificate chains that matched exactly what we were expecting. That is, some clients connected to a Mozilla site, verified the certificate chain, calculated the hashes of the certificates, determined that they didn&rsquo;t match the expected values, and sent back a report with a certificate chain that, when the hashes are re-calculated, exactly match the expected values. To explain this, first consider a related set of reports where the reported certificate chain is almost entirely what we were expecting, except for one flipped bit in the end-entity. For example, the expected certificate for ftp.mozilla.org is:</p>
+
+<pre><code> -----BEGIN CERTIFICATE-----
+ MIIGfzCCBWegAwIBAgIQCij2/BuDm6JKJB6QjwXmIjANBgkqhkiG9w0BAQsFADBN
+ MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMScwJQYDVQQDEx5E
+ aWdpQ2VydCBTSEEyIFNlY3VyZSBTZXJ2ZXIgQ0EwHhcNMTYxMjAxMDAwMDAwWhcN
+ MjAwMjA0MTIwMDAwWjCBizELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3Ju
+ aWExFjAUBgNVBAcTDU1vdW50YWluIFZpZXcxHDAaBgNVBAoTE01vemlsbGEgQ29y
+ cG9yYXRpb24xFzAVBgNVBAsTDkNsb3VkIFNlcnZpY2VzMRgwFgYDVQQDEw9mdHAu
+ bW96aWxsYS5vcmcwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCv/Z3b
+ JJT0inUCWLicsxrMQ9gMjBgWYN0T/qBp/WpumgP3EIbGlc3nqIj9SullbZtG3J3l
+ poGeSURETKDDB3wTNNzn4hhcyDqQfNY4GTNweJC+vKfybxZh1DJvr638DfA49dmV
+ VwddTu4I6TYW23O8AcHgaFFGh9leeOxyYXObKk+wo4VsQFhcQSGUeFpvLHJWGKPx
+ gjHQ4vjP4R27EGV8tND6l2a8bhwz4l5LpyGZSx/85SL+0FuBiy2tuOtV414wki6c
+ /QT/ZJ1K/COhBx0TiFEVvL1NmtvpH1ObvIkH19i1HOwIW4sx8n55cadqnvnVpXF4
+ 4npyxkOadZVlBjPBAgMBAAGjggMaMIIDFjAfBgNVHSMEGDAWgBQPgGEcgjFh1S8o
+ 541GOLQs4cbZ4jAdBgNVHQ4EFgQUOnfh2hIL8GJcJfNsY6ufSe22l3wwggFcBgNV
+ HREEggFTMIIBT4IPZnRwLm1vemlsbGEub3JnghNmdHAucHJvZC5tb3phd3MubmV0
+ ghNhcmNoaXZlLm1vemlsbGEub3JnghNmdHAtc3NsLm1vemlsbGEub3JnghRmdHAt
+ dGVzdC5tb3ppbGxhLm9yZ4IXZnRwLWNsdXN0ZXIubW96aWxsYS5vcmeCEXN0YWdl
+ Lm1vemlsbGEub3JnghdzdGFnZS1yc3luYy5tb3ppbGxhLm9yZ4IUcmVsZWFzZXMu
+ bW96aWxsYS5vcmeCH2Rvd25sb2FkLW9yaWdpbi5jZG4ubW96aWxsYS5uZXSCKWRv
+ d25sb2FkLWluc3RhbGxlci1vcmlnaW4uY2RuLm1vemlsbGEubmV0ghZjaGluYS1z
+ eW5jLm1vemlsbGEub3JnghJmdHAuZXUubW96aWxsYS5vcmeCFHJlbGVhc2VzLm1v
+ emlsbGEuY29tMA4GA1UdDwEB/wQEAwIFoDAdBgNVHSUEFjAUBggrBgEFBQcDAQYI
+ KwYBBQUHAwIwawYDVR0fBGQwYjAvoC2gK4YpaHR0cDovL2NybDMuZGlnaWNlcnQu
+ Y29tL3NzY2Etc2hhMi1nNS5jcmwwL6AtoCuGKWh0dHA6Ly9jcmw0LmRpZ2ljZXJ0
+ LmNvbS9zc2NhLXNoYTItZzUuY3JsMEwGA1UdIARFMEMwNwYJYIZIAYb9bAEBMCow
+ KAYIKwYBBQUHAgEWHGh0dHBzOi8vd3d3LmRpZ2ljZXJ0LmNvbS9DUFMwCAYGZ4EM
+ AQICMHwGCCsGAQUFBwEBBHAwbjAkBggrBgEFBQcwAYYYaHR0cDovL29jc3AuZGln
+ aWNlcnQuY29tMEYGCCsGAQUFBzAChjpodHRwOi8vY2FjZXJ0cy5kaWdpY2VydC5j
+ b20vRGlnaUNlcnRTSEEyU2VjdXJlU2VydmVyQ0EuY3J0MAwGA1UdEwEB/wQCMAAw
+ DQYJKoZIhvcNAQELBQADggEBAIM/QrNsLs9ZfQNgBbwsVVPzqYvwVtBLPhjUMOiR
+ QMhGPFOo+wcZS6IR+2GqpzF0WALSRDTQzIKNoQjM3ZJWF5W+7QlAt6uKrgKvyCDk
+ P8DkmtsJWguUvvIPjEII4zQ1vxeKETDwFGidIuMIbNZyn4aFtVkd7Wibdcphh6il
+ IHqxL40B5VgLExSVbPCnFRbINigzdGAZwTtlG7GIz29tgK1a1axNJkAiW1bPkROI
+ OzZzdY8UDzWQpB4Jo3pdBkJcx6abxoKhpy1WYCK2gyatJTREWkaiD/SZIzP2FXH0
+ zyYDsMSsg2GLvwveWIpHV062aICE6OhU8Hb0VZtTXzZFMJg=
+ -----END CERTIFICATE-----
+</code></pre>
+
+<p> but one client reported the certificate encountered as:</p>
+
+<pre><code> -----BEGIN CERTIFICATE-----
+ MIIGfzCCBWegAwIBAgIQCij2/BuDm6JKJB6QjwXmIjANBgkqhkiG9w0BAQsFADBN
+ MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMScwJQYDVQQDEx5E
+ aWdpQ2VydCBTSEEyIFNlY3VyZSBTZXJ2ZXIgQ0EwHhcNMTYxMjAxMDAwMDAwWhcN
+ MjAwMjA0MTIwMDAwWjCBizELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3Ju
+ aWExFjAUBgNVBAcTDU1vdW50YWluIFZpZXcxHDAaBgNVBAoTE01vemlsbGEgQ29y
+ cG9yYXRpb24xFzAVBgNVBAsTDkNsb3VkIFNlcnZpY2VzMRgwFgYDVQQDEw9mdHAu
+ bW96aWxsYS5vcmcwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCv/Z3b
+ JJT0inUCWLicsxrMQ9gMjBgWYN0T/qBp/WpumgP3EIbGlc3nqIj9SullbZtG3J3l
+ poGeSURETKDDB3wTNNzn4hhcyDqQfNY4GTNweJC+vKfybxZh1DJvr638DfA49dmV
+ VwddTu4I6TYW23O8AcHgaFFGh9leeOxyYXObKk+wo4VsQFhcQSGUeFpvLHJWGKPx
+ gjHQ4vjP4R27ECV8tND6l2a8bhwz4l5LpyGZSx/85SL+0FuBiy2tuOtV414wki6c
+ /QT/ZJ1K/COhBx0TiFEVvL1NmtvpH1ObvIkH19i1HOwIW4sx8n55cadqnvnVpXF4
+ 4npyxkOadZVlBjPBAgMBAAGjggMaMIIDFjAfBgNVHSMEGDAWgBQPgGEcgjFh1S8o
+ 541GOLQs4cbZ4jAdBgNVHQ4EFgQUOnfh2hIL8GJcJfNsY6ufSe22l3wwggFcBgNV
+ HREEggFTMIIBT4IPZnRwLm1vemlsbGEub3JnghNmdHAucHJvZC5tb3phd3MubmV0
+ ghNhcmNoaXZlLm1vemlsbGEub3JnghNmdHAtc3NsLm1vemlsbGEub3JnghRmdHAt
+ dGVzdC5tb3ppbGxhLm9yZ4IXZnRwLWNsdXN0ZXIubW96aWxsYS5vcmeCEXN0YWdl
+ Lm1vemlsbGEub3JnghdzdGFnZS1yc3luYy5tb3ppbGxhLm9yZ4IUcmVsZWFzZXMu
+ bW96aWxsYS5vcmeCH2Rvd25sb2FkLW9yaWdpbi5jZG4ubW96aWxsYS5uZXSCKWRv
+ d25sb2FkLWluc3RhbGxlci1vcmlnaW4uY2RuLm1vemlsbGEubmV0ghZjaGluYS1z
+ eW5jLm1vemlsbGEub3JnghJmdHAuZXUubW96aWxsYS5vcmeCFHJlbGVhc2VzLm1v
+ emlsbGEuY29tMA4GA1UdDwEB/wQEAwIFoDAdBgNVHSUEFjAUBggrBgEFBQcDAQYI
+ KwYBBQUHAwIwawYDVR0fBGQwYjAvoC2gK4YpaHR0cDovL2NybDMuZGlnaWNlcnQu
+ Y29tL3NzY2Etc2hhMi1nNS5jcmwwL6AtoCuGKWh0dHA6Ly9jcmw0LmRpZ2ljZXJ0
+ LmNvbS9zc2NhLXNoYTItZzUuY3JsMEwGA1UdIARFMEMwNwYJYIZIAYb9bAEBMCow
+ KAYIKwYBBQUHAgEWHGh0dHBzOi8vd3d3LmRpZ2ljZXJ0LmNvbS9DUFMwCAYGZ4EM
+ AQICMHwGCCsGAQUFBwEBBHAwbjAkBggrBgEFBQcwAYYYaHR0cDovL29jc3AuZGln
+ aWNlcnQuY29tMEYGCCsGAQUFBzAChjpodHRwOi8vY2FjZXJ0cy5kaWdpY2VydC5j
+ b20vRGlnaUNlcnRTSEEyU2VjdXJlU2VydmVyQ0EuY3J0MAwGA1UdEwEB/wQCMAAw
+ DQYJKoZIhvcNAQELBQADggEBAIM/QrNsLs9ZfQNgBbwsVVPzqYvwVtBLPhjUMOiR
+ QMhGPFOo+wcZS6IR+2GqpzF0WALSRDTQzIKNoQjM3ZJWF5W+7QlAt6uKrgKvyCDk
+ P8DkmtsJWguUvvIPjEII4zQ1vxeKETDwFGidIuMIbNZyn4aFtVkd7Wibdcphh6il
+ IHqxL40B5VgLExSVbPCnFRbINigzdGAZwTtlG7GIz29tgK1a1axNJkAiW1bPkROI
+ OzZzdY8UDzWQpB4Jo3pdBkJcx6abxoKhpy1WYCK2gyatJTREWkaiD/SZIzP2FXH0
+ zyYDsMSsg2GLvwveWIpHV062aICE6OhU8Hb0VZtTXzZFMJg=
+ -----END CERTIFICATE-----
+</code></pre>
+
+<p> These look identical, but at offset 0x01EB, the expected certificate has the value 0x65 while the reported certificate has the value 0x25 (i.e. they differ only in the 2nd most significant bit of that byte). This difference renders the reported certificate invalid - its signature will not validate. Since the add-on only inspects certificates that validated correctly, this change must either be intermittent or have happened after validating the certificate in the TLS handshake. Going back to the cases where clients came up with incorrect hashes for the certificates they submitted, an intermittent flipped bit could produce this exact result. As for what could cause intermittent bit flips, the most likely culprit is faulty RAM. Unfortunately, bad RAM is a hardware problem and not something we can effectively address in software.</p></li>
+<li><p>User-Initiated Trust Changes</p>
+
+<p> Finally, there was an additional category of reports where the reported chains were either a subset or a superset of the expected chains. That is, if we were expecting A -> B -> C, a client sent back A -> B -> C -> D (where D is another root in our program) or A -> B. Both of these situations can be explained by the user manually changing the certificate trust settings in their profile. For the first chain, trust for root C was removed, but since trust anchor D cross-signed it, an alternate trusted path was found (if this is unintuitive, see bug 585352). For the second chain, intermediate B was trusted, and so a shorter trusted path was found. This situation does not represent a security risk.</p></li>
+</ol>
+
+
+<h3>Conclusion</h3>
+
+<p>Ultimately this project was driven by the concern that certificates for Mozilla sites had been misissued. In analyzing the results we received, we have found no evidence to support this conclusion. To the contrary, we have identified an explanation for the results that initially gave us this concern (that is, that faulty RAM could result in flipped bits in the data being hashed, resulting in hash mismatches). Additionally, analysis of the data has revealed no new security concerns.</p>
+
+<h3>Acknowledgments</h3>
+
+<p>This work was done in collaboration with J.C. Jones, also of Security Engineering. It was made possible by support from QA, Operations, Release Engineering, Telemetry, and others.</p>
+
+<p>[0] <a href="ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-11/v2-30/pkcs-11v2-30b-d6.pdf">ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-11/v2-30/pkcs-11v2-30b-d6.pdf</a></p>
