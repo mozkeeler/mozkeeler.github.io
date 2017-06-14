@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>TSan and Firefox</title>
+</head>
+<body>
+<p>I&rsquo;m working on some Firefox patches involving threading, locks, etc. (to wit, hyper-dimensional foot-guns), and I was
+asked to run some changes through TSan (<a href="https://clang.llvm.org/docs/ThreadSanitizer.html">Thread Sanitizer</a>) by a
+reviewer. There is an <a href="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/Thread_Sanitizer">MDN page on TSan</a>,
+and it&rsquo;s a good starting place, but it certainly didn&rsquo;t get me all of the way. Now having spent a fair bit of time
+working it out, I figured I would write up my collection of tweaks for posterity. (I decided against directly editing
+the MDN page as my setup may be different from others, and there&rsquo;s no guarantee that what worked for me will translate
+anywhere else. In essence, your mileage may vary. I&rsquo;m running clang 3.9.1 on Fedora 25 as of June 2017.)</p>
+
+<p>First, the mozconfig. Here&rsquo;s what I ended up with:</p>
+
+<pre><code>ac_add_options --enable-optimize="-O2 -gline-tables-only"
+ac_add_options --disable-debug
+ac_add_options --disable-crashreporter
+ac_add_options --enable-thread-sanitizer
+ac_add_options --disable-jemalloc
+ac_add_options --disable-elf-hack
+export CFLAGS="-fsanitize=thread"
+export CXXFLAGS="-fsanitize=thread"
+export LDFLAGS="-fsanitize=thread"
+export MOZ_DEBUG_SYMBOLS=1
+ac_add_options --enable-debug-symbols
+ac_add_options --disable-install-strip
+export CC=clang
+export CXX=clang++
+</code></pre>
+
+<p>The main difference (other than not manually setting the now-autodetected values for MOZ_OBJDIR and MOZ_MAKE_FLAGS),
+is that I found that if I specified <code>-fPIC -pie</code> in the various <code>*FLAGS</code> environment variables, any resulting binary
+would print <code>FATAL: ThreadSanitizer: unexpected memory mapping</code> and exit. I believe this has something to do with that
+Thread Sanitizer doesn&rsquo;t support non-position-independent code (as noted at the bottom of the clang docs, linked above),
+and so it sets the default flags appropriatly if you <em>don&rsquo;t</em> specify <code>-fPIC</code>. I didn&rsquo;t actually investigate this too
+closely after I removed the flags and got things at least running.</p>
+
+<p>I&rsquo;m actually getting a bit ahead of myself, though, because even with the correct mozconfig and flags, Firefox will not
+compile. This is documented in <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1339013">bug 1339013</a>. From my reading,
+TSan-specific symbols referenced in  <code>gfx/skia/skia/src/core/SkSharedMutex.cpp</code> weren&rsquo;t compiled correctly in the TSan
+libraries on recent versions of Fedora, so the symbols can&rsquo;t be found. In any case, going by <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1339013#c5">comment
+5</a>, the annotations in question can just be <code>#ifdef</code>&rsquo;d out:</p>
+
+<pre><code>diff --git a/gfx/skia/skia/src/core/SkSharedMutex.cpp b/gfx/skia/skia/src/core/SkSharedMutex.cpp
+--- a/gfx/skia/skia/src/core/SkSharedMutex.cpp
++++ b/gfx/skia/skia/src/core/SkSharedMutex.cpp
+@@ -10,17 +10,17 @@
+ #include "SkAtomics.h"
+ #include "SkTypes.h"
+ #include "SkSemaphore.h"
+
+ #if !defined(__has_feature)
+     #define __has_feature(x) 0
+ #endif
+
+-#if __has_feature(thread_sanitizer)
++#if false
+
+     /* Report that a lock has been created at address "lock". */
+     #define ANNOTATE_RWLOCK_CREATE(lock) \
+         AnnotateRWLockCreate(__FILE__, __LINE__, lock)
+
+     /* Report that the lock at address "lock" is about to be destroyed. */
+     #define ANNOTATE_RWLOCK_DESTROY(lock) \
+         AnnotateRWLockDestroy(__FILE__, __LINE__, lock)
+</code></pre>
+
+<p>My first successful run of Firefox after having built with TSan resulted in many, many race detections (even without my
+changes). Luckily, there&rsquo;s already a suppression file for known, presumably-false-positives in the tree
+<a href="https://dxr.mozilla.org/mozilla-central/source/build/sanitizers/tsan_suppressions.txt">here</a>. To use them, specify
+<code>TSAN_OPTIONS="suppressions=/path/to/build/sanitizers/tsan_suppressions.txt"</code> before <code>./mach whatever</code> (or export it as
+a more permanent environment variable).</p>
+
+<p>Unfortunately, even after using the suppressions, I was still seeing races unrelated to my changes, such as:</p>
+
+<pre><code>==================
+WARNING: ThreadSanitizer: data race (pid=18939)
+  Read of size 8 at 0x7d040001bf20 by thread T36:
+    #0 strlen &lt;null&gt; (xpcshell+0x0000004307af)
+    #1 pthread_setname_np /usr/src/debug/glibc-2.24-33-ge9e69e4/nptl/../sysdeps/unix/sysv/linux/pthread_setname.c:38 (libpthread.so.0+0x0000000125e5)
+    #2 &lt;null&gt; &lt;null&gt; (libglib-2.0.so.0+0x000000071b75)
+  Previous write of size 8 at 0x7d040001bf20 by main thread (mutexes: write M11028):
+    #0 malloc &lt;null&gt; (xpcshell+0x00000042807d)
+    #1 g_malloc &lt;null&gt; (libglib-2.0.so.0+0x00000004f5b8)
+    #2 mozilla::intl::OSPreferences::GetDateTimePattern(int, int, nsACString const&amp;, nsAString&amp;) mozilla-unified/intl/locale/OSPreferences.cpp:382:8 (libxul.so+0x000000bed40f)
+    #3 mozilla::DateTimeFormat::FormatUDateTime(int, int, double, PRTimeParameters const*, nsAString&amp;) mozilla-unified/intl/locale/DateTimeFormat.cpp:96:40 (libxul.so+0x000000be7d9f)
+    #4 mozilla::DateTimeFormat::FormatPRTime(int, int, long, nsAString&amp;) mozilla-unified/intl/locale/DateTimeFormat.cpp:52:10 (libxul.so+0x000000be79f2)
+    #5 mozilla::psm::GetDateBoundary(nsIX509Cert*, nsString&amp;, nsString&amp;, bool&amp;) mozilla-unified/security/manager/ssl/TransportSecurityInfo.cpp:777:3 (libxul.so+0x000005e2f46e)
+    #6 mozilla::psm::AppendErrorTextTime(nsIX509Cert*, nsINSSComponent*, nsString&amp;) mozilla-unified/security/manager/ssl/TransportSecurityInfo.cpp:790 (libxul.so+0x000005e2f46e)
+
+...
+
+    #32 JS::Evaluate(JSContext*, JS::ReadOnlyCompileOptions const&amp;, char const*, unsigned long, JS::MutableHandle&lt;JS::Value&gt;) mozilla-unified/js/src/jsapi.cpp:4702:15 (libxul.so+0x0000068d55c9)
+    #33 ProcessArgs(mozilla::dom::AutoJSAPI&amp;, char**, int, XPCShellDirProvider*) mozilla-unified/js/xpconnect/src/XPCShellImpl.cpp:1129:13 (libxul.so+0x000001b55271)
+    #34 XRE_XPCShellMain(int, char**, char**, XREShellData const*) mozilla-unified/js/xpconnect/src/XPCShellImpl.cpp:1522 (libxul.so+0x000001b55271)
+    #35 mozilla::BootstrapImpl::XRE_XPCShellMain(int, char**, char**, XREShellData const*) mozilla-unified/toolkit/xre/Bootstrap.cpp:53:12 (libxul.so+0x00000619a22e)
+    #36 main mozilla-unified/js/xpconnect/shell/xpcshell.cpp:68:29 (xpcshell+0x0000004b6945)
+  Location is heap block of size 13 at 0x7d040001bf20 allocated by main thread:
+    #0 malloc &lt;null&gt; (xpcshell+0x00000042807d)
+    #1 g_malloc &lt;null&gt; (libglib-2.0.so.0+0x00000004f5b8)
+    #2 mozilla::intl::OSPreferences::GetDateTimePattern(int, int, nsACString const&amp;, nsAString&amp;) mozilla-unified/intl/locale/OSPreferences.cpp:382:8 (libxul.so+0x000000bed40f)
+    #3 mozilla::DateTimeFormat::FormatUDateTime(int, int, double, PRTimeParameters const*, nsAString&amp;) mozilla-unified/intl/locale/DateTimeFormat.cpp:96:40 (libxul.so+0x000000be7d9f)
+    #4 mozilla::DateTimeFormat::FormatPRTime(int, int, long, nsAString&amp;) mozilla-unified/intl/locale/DateTimeFormat.cpp:52:10 (libxul.so+0x000000be79f2)
+    #5 mozilla::psm::GetDateBoundary(nsIX509Cert*, nsString&amp;, nsString&amp;, bool&amp;) mozilla-unified/security/manager/ssl/TransportSecurityInfo.cpp:777:3 (libxul.so+0x000005e2f46e)
+    #6 mozilla::psm::AppendErrorTextTime(nsIX509Cert*, nsINSSComponent*, nsString&amp;) mozilla-unified/security/manager/ssl/TransportSecurityInfo.cpp:790 (libxul.so+0x000005e2f46e)
+
+...
+
+    #32 JS::Evaluate(JSContext*, JS::ReadOnlyCompileOptions const&amp;, char const*, unsigned long, JS::MutableHandle&lt;JS::Value&gt;) mozilla-unified/js/src/jsapi.cpp:4702:15 (libxul.so+0x0000068d55c9)
+    #33 ProcessArgs(mozilla::dom::AutoJSAPI&amp;, char**, int, XPCShellDirProvider*) mozilla-unified/js/xpconnect/src/XPCShellImpl.cpp:1129:13 (libxul.so+0x000001b55271)
+    #34 XRE_XPCShellMain(int, char**, char**, XREShellData const*) mozilla-unified/js/xpconnect/src/XPCShellImpl.cpp:1522 (libxul.so+0x000001b55271)
+    #35 mozilla::BootstrapImpl::XRE_XPCShellMain(int, char**, char**, XREShellData const*) mozilla-unified/toolkit/xre/Bootstrap.cpp:53:12 (libxul.so+0x00000619a22e)
+    #36 main mozilla-unified/js/xpconnect/shell/xpcshell.cpp:68:29 (xpcshell+0x0000004b6945)
+  Mutex M11028 (0x7d4800083d58) created at:
+    #0 pthread_mutex_init &lt;null&gt; (xpcshell+0x000000429bfa)
+    #1 mozilla::detail::MutexImpl::MutexImpl() mozilla-unified/mozglue/misc/Mutex_posix.cpp:56:3 (xpcshell+0x0000004b74a9)
+    #2 mozilla::OffTheBooksMutex::OffTheBooksMutex(char const*) mozilla-unified/obj-x86_64-pc-linux-gnu/dist/include/mozilla/Mutex.h:46:7 (libxul.so+0x000005e2d3fd)
+    #3 mozilla::Mutex::Mutex(char const*) mozilla-unified/obj-x86_64-pc-linux-gnu/dist/include/mozilla/Mutex.h:123 (libxul.so+0x000005e2d3fd)
+    #4 mozilla::psm::TransportSecurityInfo::TransportSecurityInfo() mozilla-unified/security/manager/ssl/TransportSecurityInfo.cpp:41 (libxul.so+0x000005e2d3fd)
+
+...
+
+    #22 MessageLoop::Run() mozilla-unified/ipc/chromium/src/base/message_loop.cc:211 (libxul.so+0x000001339ddc)
+    #23 nsThread::ThreadFunc(void*) mozilla-unified/xpcom/threads/nsThread.cpp:503:11 (libxul.so+0x000000b9aa6f)
+    #24 _pt_root mozilla-unified/nsprpub/pr/src/pthreads/ptthread.c:216:5 (libnspr4.so+0x000000041628)
+  Thread T36 'dconf worker' (tid=18978, running) created by main thread at:
+    #0 pthread_create &lt;null&gt; (xpcshell+0x000000429736)
+    #1 &lt;null&gt; &lt;null&gt; (libglib-2.0.so.0+0x00000008f65f)
+    #2 mozilla::intl::OSPreferences::GetDateTimePattern(int, int, nsACString const&amp;, nsAString&amp;) mozilla-unified/intl/locale/OSPreferences.cpp:382:8 (libxul.so+0x000000bed40f)
+    #3 mozilla::DateTimeFormat::FormatUDateTime(int, int, double, PRTimeParameters const*, nsAString&amp;) mozilla-unified/intl/locale/DateTimeFormat.cpp:96:40 (libxul.so+0x000000be7d9f)
+    #4 mozilla::DateTimeFormat::FormatPRTime(int, int, long, nsAString&amp;) mozilla-unified/intl/locale/DateTimeFormat.cpp:52:10 (libxul.so+0x000000be79f2)
+    #5 mozilla::psm::GetDateBoundary(nsIX509Cert*, nsString&amp;, nsString&amp;, bool&amp;) mozilla-unified/security/manager/ssl/TransportSecurityInfo.cpp:777:3 (libxul.so+0x000005e2f46e)
+    #6 mozilla::psm::AppendErrorTextTime(nsIX509Cert*, nsINSSComponent*, nsString&amp;) mozilla-unified/security/manager/ssl/TransportSecurityInfo.cpp:790 (libxul.so+0x000005e2f46e)
+
+...
+
+    #32 JS::Evaluate(JSContext*, JS::ReadOnlyCompileOptions const&amp;, char const*, unsigned long, JS::MutableHandle&lt;JS::Value&gt;) mozilla-unified/js/src/jsapi.cpp:4702:15 (libxul.so+0x0000068d55c9)
+    #33 ProcessArgs(mozilla::dom::AutoJSAPI&amp;, char**, int, XPCShellDirProvider*) mozilla-unified/js/xpconnect/src/XPCShellImpl.cpp:1129:13 (libxul.so+0x000001b55271)
+    #34 XRE_XPCShellMain(int, char**, char**, XREShellData const*) mozilla-unified/js/xpconnect/src/XPCShellImpl.cpp:1522 (libxul.so+0x000001b55271)
+    #35 mozilla::BootstrapImpl::XRE_XPCShellMain(int, char**, char**, XREShellData const*) mozilla-unified/toolkit/xre/Bootstrap.cpp:53:12 (libxul.so+0x00000619a22e)
+    #36 main mozilla-unified/js/xpconnect/shell/xpcshell.cpp:68:29 (xpcshell+0x0000004b6945)
+SUMMARY: ThreadSanitizer: data race (mozilla-unified/obj-x86_64-pc-linux-gnu/dist/bin/xpcshell+0x4307af) in strlen
+==================
+</code></pre>
+
+<p>I don&rsquo;t really know what&rsquo;s going on here, but I think the &lsquo;dconf worker&rsquo; thread (which is part of gnome?) is calling
+some 3rd-party library functions that Firefox is also calling without any kind of synchronization. Apparently there&rsquo;s
+some global state, so these are probably actual data races. In any case, these weren&rsquo;t related to what I was working on,
+so I needed to suppress them somehow. I ended up copying and adding the following to the existing
+<code>tsan_suppressions.txt</code>:</p>
+
+<pre><code>race:libgobject
+race:libglib
+race:libgio
+</code></pre>
+
+<p>And there you have it, unless I forgot something.</p>
+</body>
+</html>
