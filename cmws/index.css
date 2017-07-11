@@ -1,0 +1,27 @@
+thead > td {
+  border-bottom: 1px solid black;
+}
+
+td {
+  cursor: pointer;
+}
+
+td > table.hidden {
+  display: none;
+}
+
+td.selected {
+  background-color: lightgrey;
+}
+
+td.fieldName {
+  text-align: right;
+}
+
+td.fieldName::after {
+  content: ":";
+}
+
+td > table {
+  margin-left: 2em;
+}
