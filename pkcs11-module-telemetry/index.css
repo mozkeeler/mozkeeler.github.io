@@ -1,0 +1,13 @@
+td, th {
+  border: 1px solid black;
+  padding: 4px;
+  text-align: right;
+}
+
+thead > tr > td {
+  cursor: pointer;
+}
+
+thead > tr > td.sort::before {
+  content: "\2193";
+}
