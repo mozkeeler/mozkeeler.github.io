@@ -50,8 +50,8 @@ function normalize(moduleName) {
 
 function main() {
   setupSorts();
-  let versions = ["55", "56"];
-  let channels = ["aurora", "beta", "nightly"];
+  let versions = ["55", "56", "57"];
+  let channels = ["aurora", "beta", "nightly", "release"];
   for (let version of versions) {
     for (let channel of channels) {
       Telemetry.getEvolution(channel, version,
