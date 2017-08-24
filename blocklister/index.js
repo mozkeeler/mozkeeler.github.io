@@ -15,7 +15,7 @@ function base64ToHex(base64) {
 function formatRDNS(rdns) {
   let output = "";
   rdns.forEach((rdn) => {
-    output += `/${rdn.shortName}=${rdn.value}`;
+    output += `/${rdn.shortName}=${forge.util.decodeUtf8(rdn.value)}`;
   });
   return output;
 }
